@@ -1,0 +1,1346 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MOE MOEA TRAILS</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" crossorigin="anonymous"></script>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    html,body{min-height:100vh;background:#080604;display:flex;align-items:center;justify-content:center;font-family:'Space Grotesk',sans-serif;padding:28px 16px}
+    button{font-family:inherit}
+    ::-webkit-scrollbar{width:0;height:0}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.25}}
+    @keyframes upload-bar{from{width:0}to{width:100%}}
+    @keyframes spin{to{transform:rotate(360deg)}}
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef, useCallback, useMemo } = React;
+
+    // ═══════════════════════════════════════════════════════════
+    // PIXEL AVATAR
+    // ═══════════════════════════════════════════════════════════
+
+    const AVATAR_PALETTES = {
+      rookie:  { H:'#39ff14', V:'#1a4a08', S:'#d4a574', E:'#111' },
+      veteran: { H:'#ffd700', V:'#7a5500', S:'#d4a574', E:'#111' },
+      legend:  { H:'#bf00ff', V:'#5a0080', S:'#d4a574', E:'#111' },
+    };
+
+    function getAvatarRows(bikeType, suspType) {
+      const frameRow = bikeType === 'fully'
+        ? ".BBBBXBBBB.."
+        : ".BBBBBBBBB..";
+      const forkRow = suspType === 'coil'
+        ? "BKB......BKB"
+        : "BB.......BB.";
+      return [
+        "....HHHH....",
+        "...HHHHHH...",
+        "..HHHHHHHH..",
+        "..HVVVVVHH..",
+        "..HSSSSSHH..",
+        "..HSE.E.SH..",
+        "..HSSSSSHH..",
+        "BJJJJJJJJJJB",
+        "BJJJDDJJJJJB",
+        "..JJJJJJJJJ.",
+        "...JJJJJJJ..",
+        "....JJ.JJ...",
+        "...BBB.BBB..",
+        frameRow,
+        forkRow,
+        "WW.......WW.",
+        ".WWW...WWW..",
+      ];
+    }
+
+    function PixelAvatar({
+      tier = 'rookie', px = 3,
+      accentColor = null,
+      bikeColor = null,
+      jerseyJ = null, jerseyD = null,
+      bikeType = 'hardtail', suspType = 'air',
+      style = {}
+    }) {
+      const base = AVATAR_PALETTES[tier] || AVATAR_PALETTES.rookie;
+      const pal = {
+        ...base,
+        H: accentColor || base.H,
+        J: jerseyJ || '#e8e4dc',
+        D: jerseyD || '#9a9890',
+        B: bikeColor || '#1a1a1a',
+        W: '#0d0d0d',
+        X: '#888888',
+        K: '#666666',
+      };
+      const rows = getAvatarRows(bikeType, suspType);
+      const cols = rows[0].length;
+      const rects = [];
+      rows.forEach((row, ri) =>
+        [...row].forEach((ch, ci) => {
+          if (ch === '.') return;
+          rects.push(<rect key={`${ri}-${ci}`} x={ci*px} y={ri*px} width={px} height={px} fill={pal[ch]||'#fff'}/>);
+        })
+      );
+      return (
+        <svg width={cols*px} height={rows.length*px} viewBox={`0 0 ${cols*px} ${rows.length*px}`}
+          style={{ imageRendering:'pixelated', display:'block', ...style }}>
+          {rects}
+        </svg>
+      );
+    }
+
+    function StatCard({ label, value, unit, accent='#39ff14', glowing=false, cardStyle='outlined' }) {
+      const bg  = { outlined:'transparent', glass:'rgba(255,255,255,0.03)', solid:'#181411' };
+      const bdr = { outlined: glowing?`${accent}bb`:'rgba(255,255,255,0.09)', glass:'rgba(255,255,255,0.13)', solid:'rgba(255,255,255,0.07)' };
+      return (
+        <div style={{ flex:1, background:bg[cardStyle]||'transparent', border:`1px solid ${bdr[cardStyle]}`,
+          borderRadius:14, padding:'12px 12px 10px',
+          boxShadow: glowing?`0 0 28px ${accent}44,inset 0 1px 0 ${accent}22`:'none' }}>
+          <div style={{ fontFamily:"'Space Grotesk',sans-serif", fontSize:9, fontWeight:700,
+            letterSpacing:'0.14em', color:'#5a5550', textTransform:'uppercase', marginBottom:6 }}>
+            {label}
+          </div>
+          <div style={{ fontFamily:"'Space Mono',monospace", fontSize:20, fontWeight:700,
+            color:'#e8e4dc', lineHeight:1, display:'flex', alignItems:'baseline', gap:3 }}>
+            {value}<span style={{ fontSize:10, color:'#5a5550', fontWeight:400 }}>{unit}</span>
+          </div>
+        </div>
+      );
+    }
+
+    function MiniChart({ data, accent='#39ff14', h=72, id='chart' }) {
+      const vw=300, pad=8;
+      const max=Math.max(...data), min=Math.min(...data), range=max-min||1;
+      const pts=data.map((v,i)=>[ (i/(data.length-1))*vw, h-pad-((v-min)/range)*(h-pad*2) ]);
+      const poly=pts.map(p=>p.join(',')).join(' ');
+      const fill=[`0,${h}`,...pts.map(p=>p.join(',')),`${vw},${h}`].join(' ');
+      return (
+        <svg width="100%" viewBox={`0 0 ${vw} ${h}`} preserveAspectRatio="none" style={{display:'block'}}>
+          <defs>
+            <linearGradient id={id} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={accent} stopOpacity="0.28"/>
+              <stop offset="100%" stopColor={accent} stopOpacity="0.01"/>
+            </linearGradient>
+          </defs>
+          <polygon points={fill} fill={`url(#${id})`}/>
+          <polyline points={poly} fill="none" stroke={accent} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round"/>
+          {pts.map(([x,y],i)=><circle key={i} cx={x} cy={y} r="3.5" fill={accent}/>)}
+        </svg>
+      );
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // iOS FRAME
+    // ═══════════════════════════════════════════════════════════
+
+    function IOSStatusBar({ dark = false, time = '9:41' }) {
+      const c = dark ? '#fff' : '#000';
+      return (
+        <div style={{
+          display:'flex', gap:154, alignItems:'center', justifyContent:'center',
+          padding:'21px 24px 19px', boxSizing:'border-box',
+          position:'relative', zIndex:20, width:'100%',
+        }}>
+          <div style={{ flex:1, height:22, display:'flex', alignItems:'center', justifyContent:'center', paddingTop:1.5 }}>
+            <span style={{ fontFamily:'-apple-system,"SF Pro",system-ui', fontWeight:590, fontSize:17, lineHeight:'22px', color:c }}>{time}</span>
+          </div>
+          <div style={{ flex:1, height:22, display:'flex', alignItems:'center', justifyContent:'center', gap:7, paddingTop:1, paddingRight:1 }}>
+            <svg width="19" height="12" viewBox="0 0 19 12">
+              <rect x="0" y="7.5" width="3.2" height="4.5" rx="0.7" fill={c}/>
+              <rect x="4.8" y="5" width="3.2" height="7" rx="0.7" fill={c}/>
+              <rect x="9.6" y="2.5" width="3.2" height="9.5" rx="0.7" fill={c}/>
+              <rect x="14.4" y="0" width="3.2" height="12" rx="0.7" fill={c}/>
+            </svg>
+            <svg width="17" height="12" viewBox="0 0 17 12">
+              <path d="M8.5 3.2C10.8 3.2 12.9 4.1 14.4 5.6L15.5 4.5C13.7 2.7 11.2 1.5 8.5 1.5C5.8 1.5 3.3 2.7 1.5 4.5L2.6 5.6C4.1 4.1 6.2 3.2 8.5 3.2Z" fill={c}/>
+              <path d="M8.5 6.8C9.9 6.8 11.1 7.3 12 8.2L13.1 7.1C11.8 5.9 10.2 5.1 8.5 5.1C6.8 5.1 5.2 5.9 3.9 7.1L5 8.2C5.9 7.3 7.1 6.8 8.5 6.8Z" fill={c}/>
+              <circle cx="8.5" cy="10.5" r="1.5" fill={c}/>
+            </svg>
+            <svg width="27" height="13" viewBox="0 0 27 13">
+              <rect x="0.5" y="0.5" width="23" height="12" rx="3.5" stroke={c} strokeOpacity="0.35" fill="none"/>
+              <rect x="2" y="2" width="20" height="9" rx="2" fill={c}/>
+              <path d="M25 4.5V8.5C25.8 8.2 26.5 7.2 26.5 6.5C26.5 5.8 25.8 4.8 25 4.5Z" fill={c} fillOpacity="0.4"/>
+            </svg>
+          </div>
+        </div>
+      );
+    }
+
+    function IOSDevice({ children, width=393, height=852, dark=false }) {
+      return (
+        <div style={{
+          width, height, borderRadius:48, overflow:'hidden',
+          position:'relative', background: dark?'#000':'#F2F2F7',
+          boxShadow:'0 40px 80px rgba(0,0,0,0.18), 0 0 0 1px rgba(0,0,0,0.12)',
+          fontFamily:'-apple-system,system-ui,sans-serif',
+          WebkitFontSmoothing:'antialiased',
+        }}>
+          <div style={{
+            position:'absolute', top:11, left:'50%', transform:'translateX(-50%)',
+            width:126, height:37, borderRadius:24, background:'#000', zIndex:50,
+          }}/>
+          <div style={{ position:'absolute', top:0, left:0, right:0, zIndex:10 }}>
+            <IOSStatusBar dark={dark}/>
+          </div>
+          <div style={{ height:'100%', display:'flex', flexDirection:'column' }}>
+            <div style={{ flex:1, overflow:'auto' }}>{children}</div>
+          </div>
+          <div style={{
+            position:'absolute', bottom:0, left:0, right:0, zIndex:60,
+            height:34, display:'flex', justifyContent:'center', alignItems:'flex-end',
+            paddingBottom:8, pointerEvents:'none',
+          }}>
+            <div style={{ width:139, height:5, borderRadius:100, background:'rgba(255,255,255,0.7)' }}/>
+          </div>
+        </div>
+      );
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // TWEAKS PANEL
+    // ═══════════════════════════════════════════════════════════
+
+    const __TWEAKS_STYLE = `
+      .twk-panel{position:fixed;right:16px;bottom:16px;z-index:2147483646;width:280px;
+        max-height:calc(100vh - 32px);display:flex;flex-direction:column;
+        background:rgba(250,249,247,.78);color:#29261b;
+        -webkit-backdrop-filter:blur(24px) saturate(160%);backdrop-filter:blur(24px) saturate(160%);
+        border:.5px solid rgba(255,255,255,.6);border-radius:14px;
+        box-shadow:0 1px 0 rgba(255,255,255,.5) inset,0 12px 40px rgba(0,0,0,.18);
+        font:11.5px/1.4 ui-sans-serif,system-ui,-apple-system,sans-serif;overflow:hidden}
+      .twk-hd{display:flex;align-items:center;justify-content:space-between;
+        padding:10px 8px 10px 14px;cursor:move;user-select:none}
+      .twk-hd b{font-size:12px;font-weight:600;letter-spacing:.01em}
+      .twk-x{appearance:none;border:0;background:transparent;color:rgba(41,38,27,.55);
+        width:22px;height:22px;border-radius:6px;cursor:default;font-size:13px;line-height:1}
+      .twk-x:hover{background:rgba(0,0,0,.06);color:#29261b}
+      .twk-body{padding:2px 14px 14px;display:flex;flex-direction:column;gap:10px;
+        overflow-y:auto;overflow-x:hidden;min-height:0;}
+      .twk-row{display:flex;flex-direction:column;gap:5px}
+      .twk-row-h{flex-direction:row;align-items:center;justify-content:space-between;gap:10px}
+      .twk-lbl{display:flex;justify-content:space-between;align-items:baseline;color:rgba(41,38,27,.72)}
+      .twk-lbl>span:first-child{font-weight:500}
+      .twk-sect{font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
+        color:rgba(41,38,27,.45);padding:10px 0 0}
+      .twk-sect:first-child{padding-top:0}
+      .twk-seg{position:relative;display:flex;padding:2px;border-radius:8px;
+        background:rgba(0,0,0,.06);user-select:none}
+      .twk-seg-thumb{position:absolute;top:2px;bottom:2px;border-radius:6px;
+        background:rgba(255,255,255,.9);box-shadow:0 1px 2px rgba(0,0,0,.12);
+        transition:left .15s cubic-bezier(.3,.7,.4,1),width .15s}
+      .twk-seg button{appearance:none;position:relative;z-index:1;flex:1;border:0;
+        background:transparent;color:inherit;font:inherit;font-weight:500;min-height:22px;
+        border-radius:6px;cursor:default;padding:4px 6px;line-height:1.2}
+      .twk-toggle{position:relative;width:32px;height:18px;border:0;border-radius:999px;
+        background:rgba(0,0,0,.15);transition:background .15s;cursor:default;padding:0}
+      .twk-toggle[data-on="1"]{background:#34c759}
+      .twk-toggle i{position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;
+        background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25);transition:transform .15s}
+      .twk-toggle[data-on="1"] i{transform:translateX(14px)}
+      .twk-chips{display:flex;gap:6px}
+      .twk-chip{position:relative;appearance:none;flex:1;min-width:0;height:46px;
+        padding:0;border:0;border-radius:6px;overflow:hidden;cursor:default;
+        box-shadow:0 0 0 .5px rgba(0,0,0,.12),0 1px 2px rgba(0,0,0,.06);
+        transition:transform .12s,box-shadow .12s}
+      .twk-chip:hover{transform:translateY(-1px);box-shadow:0 0 0 .5px rgba(0,0,0,.18),0 4px 10px rgba(0,0,0,.12)}
+      .twk-chip[data-on="1"]{box-shadow:0 0 0 1.5px rgba(0,0,0,.85),0 2px 6px rgba(0,0,0,.15)}
+      .twk-chip svg{position:absolute;top:6px;left:6px;width:13px;height:13px;filter:drop-shadow(0 1px 1px rgba(0,0,0,.3))}
+      .twk-field{appearance:none;box-sizing:border-box;width:100%;min-width:0;height:26px;padding:0 8px;
+        border:.5px solid rgba(0,0,0,.1);border-radius:7px;background:rgba(255,255,255,.6);color:inherit;font:inherit;outline:none}
+      select.twk-field{padding-right:22px;
+        background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path fill='rgba(0,0,0,.5)' d='M0 0h10L5 6z'/></svg>");
+        background-repeat:no-repeat;background-position:right 8px center}
+    `;
+
+    function useTweaks(defaults) {
+      const [values, setValues] = useState(defaults);
+      const setTweak = useCallback((keyOrEdits, val) => {
+        const edits = typeof keyOrEdits === 'object' && keyOrEdits !== null
+          ? keyOrEdits : { [keyOrEdits]: val };
+        setValues(prev => ({ ...prev, ...edits }));
+      }, []);
+      return [values, setTweak];
+    }
+
+    function TweaksPanel({ title='Tweaks', children }) {
+      const [open, setOpen] = useState(false);
+      const dragRef = useRef(null);
+      const offsetRef = useRef({ x:16, y:16 });
+
+      const clamp = useCallback(() => {
+        const panel = dragRef.current;
+        if (!panel) return;
+        const PAD = 16;
+        const w = panel.offsetWidth, h = panel.offsetHeight;
+        offsetRef.current = {
+          x: Math.min(Math.max(PAD, offsetRef.current.x), window.innerWidth - w - PAD),
+          y: Math.min(Math.max(PAD, offsetRef.current.y), window.innerHeight - h - PAD),
+        };
+        panel.style.right = offsetRef.current.x + 'px';
+        panel.style.bottom = offsetRef.current.y + 'px';
+      }, []);
+
+      useEffect(() => { if (open) clamp(); }, [open, clamp]);
+
+      useEffect(() => {
+        const onMsg = e => {
+          if (e?.data?.type === '__activate_edit_mode') setOpen(true);
+          else if (e?.data?.type === '__deactivate_edit_mode') setOpen(false);
+        };
+        window.addEventListener('message', onMsg);
+        window.parent.postMessage({ type:'__edit_mode_available' }, '*');
+        return () => window.removeEventListener('message', onMsg);
+      }, []);
+
+      const onDragStart = e => {
+        const panel = dragRef.current;
+        if (!panel) return;
+        const r = panel.getBoundingClientRect();
+        const sx = e.clientX, sy = e.clientY;
+        const startRight = window.innerWidth - r.right;
+        const startBottom = window.innerHeight - r.bottom;
+        const move = ev => {
+          offsetRef.current = { x: startRight-(ev.clientX-sx), y: startBottom-(ev.clientY-sy) };
+          clamp();
+        };
+        const up = () => { window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', up); };
+        window.addEventListener('mousemove', move);
+        window.addEventListener('mouseup', up);
+      };
+
+      if (!open) return null;
+      return (
+        <>
+          <style>{__TWEAKS_STYLE}</style>
+          <div ref={dragRef} className="twk-panel" style={{ right:offsetRef.current.x, bottom:offsetRef.current.y }}>
+            <div className="twk-hd" onMouseDown={onDragStart}>
+              <b>{title}</b>
+              <button className="twk-x" onClick={() => { setOpen(false); window.parent.postMessage({type:'__edit_mode_dismissed'},'*'); }}>✕</button>
+            </div>
+            <div className="twk-body">{children}</div>
+          </div>
+        </>
+      );
+    }
+
+    function TweakSection({ label }) { return <div className="twk-sect">{label}</div>; }
+
+    function TweakRow({ label, children }) {
+      return (
+        <div className="twk-row">
+          <div className="twk-lbl"><span>{label}</span></div>
+          {children}
+        </div>
+      );
+    }
+
+    function TweakRadio({ label, value, options, onChange }) {
+      const opts = options.map(o => typeof o === 'object' ? o : { value:o, label:o });
+      const idx = Math.max(0, opts.findIndex(o => o.value === value));
+      const n = opts.length;
+      const maxLen = opts.reduce((m,o) => Math.max(m, String(o.label).length), 0);
+      const fitsAsSegments = maxLen <= ({ 2:16, 3:10 }[n] ?? 0);
+      if (!fitsAsSegments) {
+        return (
+          <TweakRow label={label}>
+            <select className="twk-field" value={value} onChange={e => onChange(e.target.value)}>
+              {opts.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+          </TweakRow>
+        );
+      }
+      return (
+        <TweakRow label={label}>
+          <div className="twk-seg" role="radiogroup">
+            <div className="twk-seg-thumb" style={{ left:`calc(2px + ${idx} * (100% - 4px) / ${n})`, width:`calc((100% - 4px) / ${n})` }}/>
+            {opts.map(o => (
+              <button key={o.value} type="button" role="radio" aria-checked={o.value===value} onClick={() => onChange(o.value)}>
+                {o.label}
+              </button>
+            ))}
+          </div>
+        </TweakRow>
+      );
+    }
+
+    function TweakColor({ label, value, options, onChange }) {
+      const key = o => String(JSON.stringify(o)).toLowerCase();
+      const cur = key(value);
+      return (
+        <TweakRow label={label}>
+          <div className="twk-chips" role="radiogroup">
+            {options.map((o, i) => {
+              const colors = Array.isArray(o) ? o : [o];
+              const hero = colors[0];
+              const on = key(o) === cur;
+              const light = (() => {
+                const h = String(hero).replace('#','');
+                const x = h.length===3?h.replace(/./g,c=>c+c):h.padEnd(6,'0');
+                const n2 = parseInt(x.slice(0,6),16);
+                if (isNaN(n2)) return true;
+                const r2=(n2>>16)&255,g2=(n2>>8)&255,b2=n2&255;
+                return r2*299+g2*587+b2*114>148000;
+              })();
+              return (
+                <button key={i} type="button" className="twk-chip" role="radio"
+                  aria-checked={on} data-on={on?'1':'0'}
+                  style={{ background:hero }}
+                  onClick={() => onChange(o)}>
+                  {on && (
+                    <svg viewBox="0 0 14 14" aria-hidden="true">
+                      <path d="M3 7.2 5.8 10 11 4.2" fill="none" strokeWidth="2.2"
+                        strokeLinecap="round" strokeLinejoin="round"
+                        stroke={light?'rgba(0,0,0,.78)':'#fff'}/>
+                    </svg>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </TweakRow>
+      );
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // SCREEN COMPONENTS
+    // ═══════════════════════════════════════════════════════════
+
+    const AIRTIMES = [0.8,1.2,1.8,1.4,2.1,1.9,2.0,2.3,2.1,2.34];
+
+    const FEED_ITEMS = [
+      { id:1, user:'TrailKing_Max',   tier:'veteran', bike:'Trek Slash 9.9',     fires:142, verified:true,  time:'vor 2h' },
+      { id:2, user:'DirtQueen_Sara',  tier:'rookie',  bike:'Santa Cruz Bronson', fires:98,  verified:true,  time:'vor 5h' },
+      { id:3, user:'GravelGuru',      tier:'legend',  bike:'Specialized Enduro', fires:67,  verified:false, time:'vor 1d' },
+      { id:4, user:'Ramp_Rider_Bene', tier:'rookie',  bike:'Yeti SB140',         fires:45,  verified:true,  time:'vor 2d' },
+    ];
+
+    const LEADERBOARD = {
+      airtime: [
+        { rank:1, user:'TrailKing_Max',   tier:'veteran', value:'3.82', unit:'s',    bike:'Trek Slash',    team:'MOE MOEA Crew' },
+        { rank:2, user:'DirtQueen_Sara',  tier:'rookie',  value:'3.21', unit:'s',    bike:'SC Bronson',    team:'Singletrack Sisters' },
+        { rank:3, user:'MaxTrailblazer',  tier:'rookie',  value:'2.34', unit:'s',    bike:'Trek Slash',    team:'MOE MOEA Crew', isMe:true },
+        { rank:4, user:'GravelGuru',      tier:'legend',  value:'2.11', unit:'s',    bike:'Enduro',        team:'Trail Devils' },
+        { rank:5, user:'FatTire_Franz',   tier:'rookie',  value:'1.98', unit:'s',    bike:'Orbea Rallon',  team:'MOE MOEA Crew' },
+        { rank:6, user:'BikePark_Bene',   tier:'rookie',  value:'1.87', unit:'s',    bike:'Canyon Strive', team:'Dirt Crew' },
+        { rank:7, user:'Ramp_Rider_Bene', tier:'rookie',  value:'1.76', unit:'s',    bike:'Yeti SB140',    team:'Solo' },
+      ],
+      gforce: [
+        { rank:1, user:'GravelGuru',      tier:'legend',  value:'5.8',  unit:'g',    bike:'Enduro',        team:'Trail Devils' },
+        { rank:2, user:'TrailKing_Max',   tier:'veteran', value:'5.2',  unit:'g',    bike:'Trek Slash',    team:'MOE MOEA Crew' },
+        { rank:3, user:'Ramp_Rider_Bene', tier:'rookie',  value:'4.9',  unit:'g',    bike:'Yeti SB140',    team:'Solo' },
+        { rank:4, user:'MaxTrailblazer',  tier:'rookie',  value:'4.2',  unit:'g',    bike:'Trek Slash',    team:'MOE MOEA Crew', isMe:true },
+        { rank:5, user:'DirtQueen_Sara',  tier:'rookie',  value:'3.8',  unit:'g',    bike:'SC Bronson',    team:'Singletrack Sisters' },
+      ],
+      speed: [
+        { rank:1, user:'DirtQueen_Sara',  tier:'rookie',  value:'78',   unit:'km/h', bike:'SC Bronson',    team:'Singletrack Sisters' },
+        { rank:2, user:'TrailKing_Max',   tier:'veteran', value:'74',   unit:'km/h', bike:'Trek Slash',    team:'MOE MOEA Crew' },
+        { rank:3, user:'BikePark_Bene',   tier:'rookie',  value:'71',   unit:'km/h', bike:'Canyon Strive', team:'Dirt Crew' },
+        { rank:4, user:'MaxTrailblazer',  tier:'rookie',  value:'67',   unit:'km/h', bike:'Trek Slash',    team:'MOE MOEA Crew', isMe:true },
+        { rank:5, user:'FatTire_Franz',   tier:'rookie',  value:'64',   unit:'km/h', bike:'Orbea Rallon',  team:'MOE MOEA Crew' },
+      ],
+      style: [
+        { rank:1, user:'TrailKing_Max',   tier:'veteran', value:'892',  unit:'pts',  bike:'Trek Slash',    team:'MOE MOEA Crew' },
+        { rank:2, user:'DirtQueen_Sara',  tier:'rookie',  value:'744',  unit:'pts',  bike:'SC Bronson',    team:'Singletrack Sisters' },
+        { rank:3, user:'GravelGuru',      tier:'legend',  value:'612',  unit:'pts',  bike:'Enduro',        team:'Trail Devils' },
+        { rank:4, user:'MaxTrailblazer',  tier:'rookie',  value:'487',  unit:'pts',  bike:'Trek Slash',    team:'MOE MOEA Crew', isMe:true },
+        { rank:5, user:'Ramp_Rider_Bene', tier:'rookie',  value:'342',  unit:'pts',  bike:'Yeti SB140',    team:'Solo' },
+      ],
+    };
+
+    const ACHIEVEMENTS = [
+      { id:'first_air',   label:'Erster Flug',   color:'#39ff14', unlocked:true,  desc:'Airtime detektiert' },
+      { id:'five_runs',   label:'5 Runs',         color:'#ffd700', unlocked:true,  desc:'5 Sessions' },
+      { id:'top3',        label:'Podium',         color:'#bf00ff', unlocked:true,  desc:'Top 3 Rangliste' },
+      { id:'trail_care',  label:'Trail-Pfleger',  color:'#00e5ff', unlocked:true,  desc:'Mängel gemeldet' },
+      { id:'goldhelmet',  label:'Goldhelm',       color:'#ffd700', unlocked:false, desc:'20 Runs nötig' },
+      { id:'contest_win', label:'Contest-Star',   color:'#ff6b00', unlocked:false, desc:'Contest gewinnen' },
+    ];
+
+    function Label({ children, accent }) {
+      return (
+        <div style={{ fontFamily:"'Space Grotesk',sans-serif", fontSize:9, fontWeight:700,
+          letterSpacing:'0.18em', color:accent, textTransform:'uppercase', marginBottom:10 }}>
+          {children}
+        </div>
+      );
+    }
+
+    function TierDot({ tier }) {
+      const c = { rookie:'#39ff14', veteran:'#ffd700', legend:'#bf00ff' }[tier]||'#aaa';
+      return <div style={{ width:6, height:6, borderRadius:'50%', background:c, flexShrink:0, boxShadow:`0 0 6px ${c}` }}/>;
+    }
+
+    function SegBtn({ options, active, onChange, accent }) {
+      return (
+        <div style={{ display:'flex', gap:4 }}>
+          {options.map(o => (
+            <button key={o} onClick={() => onChange(o)} style={{
+              flex:1, background:active===o?accent:'transparent',
+              border:`1px solid ${active===o?accent:'rgba(255,255,255,0.12)'}`,
+              borderRadius:8, padding:'7px 0', cursor:'pointer',
+              fontFamily:"'Space Grotesk',sans-serif", fontSize:11, fontWeight:700,
+              color:active===o?'#000':'#5a5550', transition:'all 0.15s',
+            }}>{o}</button>
+          ))}
+        </div>
+      );
+    }
+
+    function ConfigRow({ label, children }) {
+      return (
+        <div style={{ marginBottom:14 }}>
+          <div style={{ fontFamily:"'Space Grotesk',sans-serif", fontSize:9, letterSpacing:'0.12em',
+            color:'#5a5550', textTransform:'uppercase', marginBottom:8 }}>{label}</div>
+          {children}
+        </div>
+      );
+    }
+
+    function VideoPlaceholder({ h=200 }) {
+      const uid = Math.random().toString(36).slice(2,6);
+      return (
+        <svg width="100%" height={h} viewBox={`0 0 360 ${h}`} preserveAspectRatio="xMidYMid slice" style={{display:'block'}}>
+          <rect width="360" height={h} fill="#0e0c0a"/>
+          <defs>
+            <pattern id={`s${uid}`} width="20" height="20" patternUnits="userSpaceOnUse" patternTransform="rotate(40)">
+              <rect width="20" height="20" fill="#0e0c0a"/>
+              <rect width="0.8" height="20" fill="#191512"/>
+            </pattern>
+          </defs>
+          <rect width="360" height={h} fill={`url(#s${uid})`}/>
+          <circle cx="180" cy={h/2} r="26" fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.12)" strokeWidth="1"/>
+          <polygon points={`173,${h/2-11} 193,${h/2} 173,${h/2+11}`} fill="rgba(255,255,255,0.65)"/>
+          <text x="180" y={h-12} textAnchor="middle" fontSize="8" fill="rgba(255,255,255,0.15)"
+            fontFamily="'Space Mono',monospace" letterSpacing="3">MOE MOEA TRAILS</text>
+        </svg>
+      );
+    }
+
+    // ── DASHBOARD ────────────────────────────────────────────────
+
+    function DashboardScreen({ accent, cardStyle, dashLayout, bikeConfig }) {
+      const P = { padding:'0 16px 100px', fontFamily:"'Space Grotesk',sans-serif" };
+      const sessionHeader = (
+        <div style={{ padding:'10px 0 14px' }}>
+          <div style={{ fontSize:9, letterSpacing:'0.2em', color:accent, textTransform:'uppercase', marginBottom:4 }}>
+            ▶ LETZTE SESSION
+          </div>
+          <div style={{ fontSize:19, fontWeight:700, color:'#e8e4dc', lineHeight:1.15 }}>MOE MOEA Trails</div>
+          <div style={{ fontFamily:"'Space Mono',monospace", fontSize:11, color:'#5a5550', marginTop:3 }}>
+            12.05.2026 · 14:32 · Neckartal
+          </div>
+        </div>
+      );
+
+      if (dashLayout === 'hud') {
+        return (
+          <div style={P}>
+            {sessionHeader}
+            <div style={{ border:`1px solid ${accent}`, borderRadius:16, padding:'18px 20px 14px', marginBottom:12,
+              boxShadow:`0 0 40px ${accent}22, inset 0 1px 0 ${accent}18`, background:`${accent}07` }}>
+              <div style={{ fontSize:9, letterSpacing:'0.2em', color:accent, textTransform:'uppercase', marginBottom:10 }}>
+                MAX. AIRTIME — BESTER SPRUNG
+              </div>
+              <div style={{ display:'flex', alignItems:'flex-end', gap:8 }}>
+                <div style={{ fontFamily:"'Space Mono',monospace", fontSize:62, fontWeight:700, color:'#e8e4dc',
+                  lineHeight:1, textShadow:`0 0 40px ${accent}99` }}>2.34</div>
+                <div style={{ fontFamily:"'Space Mono',monospace", fontSize:17, color:'#5a5550', paddingBottom:8 }}>SEK</div>
+              </div>
+              <div style={{ marginTop:10, height:1, background:`${accent}28` }}/>
+              <div style={{ display:'flex', gap:20, marginTop:8 }}>
+                {[['SPRÜNGE','8'],['AVG. LÄNGE','12.4m'],['RANG','#3']].map(([k,v])=>(
+                  <div key={k}>
+                    <div style={{ fontSize:8, letterSpacing:'0.12em', color:'#5a5550', textTransform:'uppercase' }}>{k}</div>
+                    <div style={{ fontFamily:"'Space Mono',monospace", fontSize:13, color:'#e8e4dc', fontWeight:700 }}>{v}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div style={{ display:'flex', gap:8, marginBottom:16 }}>
+              <StatCard label="G-KRAFT"   value="4.2" unit="g"    accent={accent} cardStyle={cardStyle}/>
+              <StatCard label="TOP-SPEED" value="67"  unit="km/h" accent={accent} cardStyle={cardStyle}/>
+              <StatCard label="DISTANZ"   value="8.4" unit="km"   accent={accent} cardStyle={cardStyle}/>
+            </div>
+            <div style={{ marginBottom:16 }}>
+              <Label accent={accent}>Airtime Verlauf — 10 Runs</Label>
+              <div style={{ border:`1px solid rgba(255,255,255,0.07)`, borderRadius:12, padding:'12px 12px 8px',
+                background:cardStyle==='solid'?'#181411':cardStyle==='glass'?'rgba(255,255,255,0.02)':'transparent' }}>
+                <MiniChart data={AIRTIMES} accent={accent} h={72} id="d-hud"/>
+              </div>
+            </div>
+            <Label accent={accent}>Letzte Sessions</Label>
+            {[
+              { trail:'MOE MOEA Trails', date:'heute, 14:32', air:'2.34s', runs:12 },
+              { trail:'MOE MOEA Trails', date:'10.05, 11:00', air:'1.98s', runs:9  },
+              { trail:'Singletrail Heide', date:'07.05, 09:30', air:'1.44s', runs:6 },
+            ].map((s,i)=>(
+              <div key={i} style={{ display:'flex', justifyContent:'space-between', alignItems:'center',
+                padding:'10px 0', borderBottom:`1px solid rgba(255,255,255,0.06)` }}>
+                <div>
+                  <div style={{ fontSize:13, color:'#e8e4dc', fontWeight:600 }}>{s.trail}</div>
+                  <div style={{ fontFamily:"'Space Mono',monospace", fontSize:10, color:'#5a5550', marginTop:2 }}>{s.date}</div>
+                </div>
+                <div style={{ textAlign:'right' }}>
+                  <div style={{ fontFamily:"'Space Mono',monospace", fontSize:14, color:accent, fontWeight:700 }}>{s.air}</div>
+                  <div style={{ fontSize:10, color:'#5a5550' }}>{s.runs} Runs</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        );
+      }
+
+      return (
+        <div style={P}>
+          {sessionHeader}
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:16 }}>
+            <StatCard label="Max. Airtime" value="2.34" unit="s"    accent={accent} glowing cardStyle={cardStyle}/>
+            <StatCard label="G-Kraft"      value="4.2"  unit="g"    accent={accent} cardStyle={cardStyle}/>
+            <StatCard label="Top-Speed"    value="67"   unit="km/h" accent={accent} cardStyle={cardStyle}/>
+            <StatCard label="Distanz"      value="8.4"  unit="km"   accent={accent} cardStyle={cardStyle}/>
+          </div>
+          <div style={{ marginBottom:16 }}>
+            <Label accent={accent}>Airtime Verlauf — 10 Runs</Label>
+            <div style={{ border:`1px solid rgba(255,255,255,0.07)`, borderRadius:12, padding:'12px 12px 8px',
+              background:cardStyle==='solid'?'#181411':cardStyle==='glass'?'rgba(255,255,255,0.02)':'transparent' }}>
+              <MiniChart data={AIRTIMES} accent={accent} h={80} id="d-cards"/>
+            </div>
+          </div>
+          <Label accent={accent}>Letzte Sessions</Label>
+          {[
+            { trail:'MOE MOEA Trails', date:'heute', air:'2.34s', runs:12 },
+            { trail:'Singletrail Heide', date:'07.05', air:'1.44s', runs:6 },
+          ].map((s,i)=>(
+            <div key={i} style={{ display:'flex', alignItems:'center', gap:12, padding:'10px 12px',
+              background:cardStyle==='solid'?'#181411':'rgba(255,255,255,0.02)',
+              border:`1px solid rgba(255,255,255,0.07)`, borderRadius:12, marginBottom:8 }}>
+              <div style={{ flex:1 }}>
+                <div style={{ fontSize:13, color:'#e8e4dc', fontWeight:600 }}>{s.trail}</div>
+                <div style={{ fontSize:10, color:'#5a5550' }}>{s.date} · {s.runs} Runs</div>
+              </div>
+              <div style={{ fontFamily:"'Space Mono',monospace", fontSize:16, color:accent, fontWeight:700 }}>{s.air}</div>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    // ── FEED ─────────────────────────────────────────────────────
+
+    function FeedScreen({ accent, cardStyle, onUpload }) {
+      const [fires, setFires] = useState(FEED_ITEMS.map(f=>({ count:f.fires, active:false })));
+      const toggle = i => setFires(prev => prev.map((f,idx)=>
+        idx===i ? { count:f.active?f.count-1:f.count+1, active:!f.active } : f
+      ));
+
+      return (
+        <div style={{ fontFamily:"'Space Grotesk',sans-serif", paddingBottom:100 }}>
+          <div style={{ padding:'10px 16px 14px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+            <div>
+              <Label accent={accent}>Style Contest</Label>
+              <div style={{ fontSize:20, fontWeight:700, color:'#e8e4dc', marginTop:-6 }}>Mai 2026</div>
+              <div style={{ fontSize:11, color:'#5a5550', marginTop:2 }}>MOE MOEA Trails · {FEED_ITEMS.filter(f=>f.verified).length} validierte Clips</div>
+            </div>
+            <div style={{ background:`${accent}18`, border:`1px solid ${accent}55`, borderRadius:8,
+              padding:'4px 10px', fontFamily:"'Space Mono',monospace", fontSize:9, color:accent }}>
+              LIVE
+            </div>
+          </div>
+
+          <div style={{ margin:'0 16px 16px' }}>
+            <button onClick={onUpload} style={{
+              width:'100%', background:'transparent',
+              border:`1px solid ${accent}`, borderRadius:14,
+              padding:'14px 16px', cursor:'pointer', textAlign:'left',
+              display:'flex', alignItems:'center', gap:12,
+              boxShadow:`0 0 20px ${accent}18`,
+            }}>
+              <div style={{ width:40, height:40, borderRadius:10, background:`${accent}1a`,
+                border:`1px solid ${accent}44`, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                  <path d="M9 13V3M9 3L5 7M9 3l4 4" stroke={accent} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M2 15h14" stroke={accent} strokeWidth="1.8" strokeLinecap="round"/>
+                </svg>
+              </div>
+              <div style={{ flex:1 }}>
+                <div style={{ fontSize:14, fontWeight:700, color:'#e8e4dc', marginBottom:2 }}>Video einreichen</div>
+                <div style={{ fontSize:10, color:'#5a5550' }}>QR scannen → aufnehmen → hochladen</div>
+              </div>
+              <svg width="7" height="12" viewBox="0 0 7 12"><path d="M1 1l5 5-5 5" stroke={accent} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            </button>
+          </div>
+
+          <div style={{ margin:'0 16px 14px', padding:'10px 12px', borderRadius:10,
+            background:'rgba(255,107,0,0.07)', border:'1px solid rgba(255,107,0,0.25)',
+            display:'flex', alignItems:'center', gap:10 }}>
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <rect x="0.5" y="0.5" width="6" height="6" rx="0.5" stroke="#ff6b00" strokeWidth="1.2"/>
+              <rect x="2" y="2" width="3" height="3" fill="#ff6b00"/>
+              <rect x="9.5" y="0.5" width="6" height="6" rx="0.5" stroke="#ff6b00" strokeWidth="1.2"/>
+              <rect x="11" y="2" width="3" height="3" fill="#ff6b00"/>
+              <rect x="0.5" y="9.5" width="6" height="6" rx="0.5" stroke="#ff6b00" strokeWidth="1.2"/>
+              <rect x="2" y="11" width="3" height="3" fill="#ff6b00"/>
+              <rect x="9.5" y="9.5" width="2.5" height="2.5" fill="#ff6b00"/>
+              <rect x="13" y="9.5" width="2.5" height="2.5" fill="#ff6b00"/>
+              <rect x="9.5" y="13" width="2.5" height="2.5" fill="#ff6b00"/>
+              <rect x="13" y="13" width="2.5" height="2.5" fill="#ff6b00"/>
+            </svg>
+            <div style={{ fontSize:11, color:'rgba(255,107,0,0.85)' }}>
+              QR-Code am Anfang des Videos pflicht — sonst kein Leaderboard!
+            </div>
+          </div>
+
+          {FEED_ITEMS.map((item, i) => (
+            <div key={item.id} style={{ margin:'0 16px 14px',
+              border:`1px solid rgba(255,255,255,0.08)`, borderRadius:16, overflow:'hidden',
+              background:cardStyle==='solid'?'#181411':'rgba(255,255,255,0.02)' }}>
+              <div style={{ position:'relative' }}>
+                <VideoPlaceholder h={190}/>
+                {item.verified
+                  ? <div style={{ position:'absolute', top:10, right:10, background:`${accent}22`,
+                      border:`1px solid ${accent}77`, borderRadius:20, padding:'3px 10px',
+                      fontFamily:"'Space Mono',monospace", fontSize:8, color:accent,
+                      display:'flex', alignItems:'center', gap:4 }}>
+                      <svg width="7" height="7" viewBox="0 0 7 7"><circle cx="3.5" cy="3.5" r="3" fill={accent}/><path d="M2 3.5l1 1 1.5-1.5" stroke="#000" strokeWidth="1" strokeLinecap="round"/></svg>
+                      QR VALID
+                    </div>
+                  : <div style={{ position:'absolute', top:10, right:10, background:'rgba(255,40,40,0.13)',
+                      border:'1px solid rgba(255,60,60,0.35)', borderRadius:20, padding:'3px 10px',
+                      fontFamily:"'Space Mono',monospace", fontSize:8, color:'rgba(255,80,80,0.9)' }}>
+                      NICHT VALIDIERT
+                    </div>
+                }
+              </div>
+              <div style={{ padding:'10px 12px', display:'flex', alignItems:'center', gap:10 }}>
+                <PixelAvatar tier={item.tier} px={2} accentColor={accent}/>
+                <div style={{ flex:1 }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:2 }}>
+                    <span style={{ fontSize:13, fontWeight:700, color:'#e8e4dc' }}>{item.user}</span>
+                    <TierDot tier={item.tier}/>
+                  </div>
+                  <div style={{ fontSize:10, color:'#5a5550' }}>{item.bike} · {item.time}</div>
+                </div>
+                <button onClick={()=>toggle(i)} style={{
+                  background:fires[i].active?'rgba(255,107,0,0.14)':'transparent',
+                  border:`1px solid ${fires[i].active?'#ff6b00':'rgba(255,255,255,0.12)'}`,
+                  borderRadius:20, padding:'6px 12px', cursor:'pointer',
+                  display:'flex', alignItems:'center', gap:5, transition:'all 0.15s',
+                }}>
+                  <svg width="13" height="13" viewBox="0 0 13 13">
+                    <path d="M6.5 12C4 10 1 8 1 5a3 3 0 015.5-1.7A3 3 0 0112 5c0 3-3 5-5.5 7z"
+                      fill={fires[i].active?'#ff6b00':'none'}
+                      stroke={fires[i].active?'#ff6b00':'#5a5550'} strokeWidth="1.3"/>
+                  </svg>
+                  <span style={{ fontFamily:"'Space Mono',monospace", fontSize:11, fontWeight:700,
+                    color:fires[i].active?'#ff6b00':'#5a5550' }}>{fires[i].count}</span>
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    // ── LEADERBOARD ──────────────────────────────────────────────
+
+    function LeaderboardScreen({ accent, cardStyle, bikeConfig }) {
+      const [tab, setTab] = useState('airtime');
+      const tabs = [['airtime','AIRTIME'],['gforce','G-KRAFT'],['speed','SPEED'],['style','STYLE']];
+      const data = LEADERBOARD[tab]||[];
+      const top3 = data.slice(0,3);
+      const rest  = data.slice(3);
+      const podiumOrder = [1,0,2];
+      const podiumH = [56,76,44];
+      const medals = ['#ffd700','#c0c0c0','#cd7f32'];
+
+      return (
+        <div style={{ fontFamily:"'Space Grotesk',sans-serif", paddingBottom:100 }}>
+          <div style={{ padding:'10px 16px 14px' }}>
+            <Label accent={accent}>Rangliste</Label>
+            <div style={{ fontSize:20, fontWeight:700, color:'#e8e4dc', marginTop:-6 }}>MOE MOEA Trails</div>
+            <div style={{ fontSize:11, color:'#5a5550', marginTop:2 }}>Neckartal · Mai 2026</div>
+          </div>
+          <div style={{ display:'flex', gap:6, padding:'0 16px 18px', overflowX:'auto' }}>
+            {tabs.map(([id,lbl])=>(
+              <button key={id} onClick={()=>setTab(id)} style={{
+                background:tab===id?accent:'transparent',
+                border:`1px solid ${tab===id?accent:'rgba(255,255,255,0.12)'}`,
+                borderRadius:20, padding:'6px 14px', cursor:'pointer', whiteSpace:'nowrap',
+                fontFamily:"'Space Grotesk',sans-serif", fontSize:10, fontWeight:700,
+                letterSpacing:'0.08em', color:tab===id?'#000':'#5a5550', transition:'all 0.15s',
+              }}>{lbl}</button>
+            ))}
+          </div>
+
+          {top3.length>0 && (
+            <div style={{ display:'flex', justifyContent:'center', alignItems:'flex-end', gap:8, padding:'0 20px 22px' }}>
+              {podiumOrder.map((pos,idx)=>{
+                const e = top3[pos]; if (!e) return null;
+                const isGold = pos===0;
+                return (
+                  <div key={pos} style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:5 }}>
+                    {e.isMe
+                      ? <PixelAvatar tier={e.tier} px={isGold?4:3} accentColor={accent}
+                          bikeColor={bikeConfig.bikeColor} jerseyJ={bikeConfig.jerseyJ}
+                          jerseyD={bikeConfig.jerseyD} bikeType={bikeConfig.bikeType} suspType={bikeConfig.susp}/>
+                      : <PixelAvatar tier={e.tier} px={isGold?4:3}/>
+                    }
+                    <div style={{ fontSize:9, color:'#e8e4dc', fontWeight:700, textAlign:'center',
+                      whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', maxWidth:'100%' }}>
+                      {e.user}
+                    </div>
+                    <div style={{ fontFamily:"'Space Mono',monospace", fontSize:isGold?15:12,
+                      color:isGold?accent:'#e8e4dc', fontWeight:700 }}>
+                      {e.value}<span style={{ fontSize:9, color:'#5a5550' }}>{e.unit}</span>
+                    </div>
+                    <div style={{ width:'100%', height:podiumH[idx], background:`${medals[pos]}1a`,
+                      border:`1px solid ${medals[pos]}55`, borderRadius:'6px 6px 0 0',
+                      display:'flex', alignItems:'center', justifyContent:'center' }}>
+                      <span style={{ fontFamily:"'Space Mono',monospace", fontSize:18, color:medals[pos], fontWeight:700 }}>
+                        {pos+1}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          <div style={{ padding:'0 16px' }}>
+            {rest.map(e=>(
+              <div key={e.rank} style={{ display:'flex', alignItems:'center', gap:10, padding:'9px 12px', marginBottom:6,
+                borderRadius:12, background:e.isMe?`${accent}0f`:cardStyle==='solid'?'#181411':'rgba(255,255,255,0.02)',
+                border:`1px solid ${e.isMe?accent+'33':'rgba(255,255,255,0.07)'}` }}>
+                <div style={{ fontFamily:"'Space Mono',monospace", fontSize:12, color:'#3a3530',
+                  width:18, textAlign:'center', fontWeight:700 }}>#{e.rank}</div>
+                {e.isMe
+                  ? <PixelAvatar tier={e.tier} px={2} accentColor={accent}
+                      bikeColor={bikeConfig.bikeColor} jerseyJ={bikeConfig.jerseyJ}
+                      jerseyD={bikeConfig.jerseyD} bikeType={bikeConfig.bikeType} suspType={bikeConfig.susp}/>
+                  : <PixelAvatar tier={e.tier} px={2}/>
+                }
+                <div style={{ flex:1 }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+                    <span style={{ fontSize:12, color:'#e8e4dc', fontWeight:e.isMe?700:500 }}>{e.user}</span>
+                    {e.isMe && <span style={{ fontSize:8, color:accent, letterSpacing:'0.1em' }}>ICH</span>}
+                  </div>
+                  <div style={{ fontSize:10, color:'#5a5550' }}>{e.bike}</div>
+                </div>
+                <div style={{ fontFamily:"'Space Mono',monospace", fontSize:14,
+                  color:e.isMe?accent:'#e8e4dc', fontWeight:700 }}>
+                  {e.value}<span style={{ fontSize:9, color:'#5a5550' }}>{e.unit}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    // ── PROFILE ──────────────────────────────────────────────────
+
+    function ProfileScreen({ accent, cardStyle, bikeConfig, onBikeConfigChange }) {
+      const xp = 3420, xpMax = 4000;
+      const bikeColorOpts = ['#1a1a1a','#555555','#1a3a99','#991a1a','#1a6620','#997700'];
+      const jerseyOpts = [
+        { J:'#e8e4dc', D:'#9a9890' },
+        { J:'#1a1a1a', D:'#333' },
+        { J:'#cc2200', D:'#881500' },
+      ];
+      const set = (key, val) => onBikeConfigChange({ ...bikeConfig, [key]:val });
+
+      return (
+        <div style={{ fontFamily:"'Space Grotesk',sans-serif", paddingBottom:100 }}>
+          <div style={{ padding:'12px 16px 16px', display:'flex', flexDirection:'column', alignItems:'center', gap:10 }}>
+            <div style={{ display:'flex', alignItems:'center', gap:14 }}>
+              <div style={{ width:80, height:80, borderRadius:16, background:'#181411',
+                border:`2px solid ${accent}55`, display:'flex', alignItems:'center', justifyContent:'center',
+                boxShadow:`0 0 28px ${accent}28` }}>
+                <PixelAvatar tier="rookie" px={4} accentColor={accent}
+                  bikeColor={bikeConfig.bikeColor} jerseyJ={bikeConfig.jerseyJ}
+                  jerseyD={bikeConfig.jerseyD} bikeType={bikeConfig.bikeType} suspType={bikeConfig.susp}/>
+              </div>
+              <div>
+                <div style={{ fontSize:20, fontWeight:700, color:'#e8e4dc' }}>MaxTrailblazer</div>
+                <div style={{ fontSize:11, color:'#5a5550', marginTop:2 }}>MOE MOEA Crew</div>
+                <div style={{ display:'inline-flex', background:`${accent}1a`, border:`1px solid ${accent}44`,
+                  borderRadius:20, padding:'2px 10px', marginTop:5,
+                  fontFamily:"'Space Mono',monospace", fontSize:10, color:accent }}>LVL 12</div>
+              </div>
+            </div>
+            <div style={{ width:'100%' }}>
+              <div style={{ display:'flex', justifyContent:'space-between', marginBottom:5 }}>
+                <span style={{ fontSize:9, letterSpacing:'0.1em', color:'#5a5550', textTransform:'uppercase' }}>Erfahrung</span>
+                <span style={{ fontFamily:"'Space Mono',monospace", fontSize:9, color:accent }}>
+                  {xp.toLocaleString()} / {xpMax.toLocaleString()} XP
+                </span>
+              </div>
+              <div style={{ height:5, background:'rgba(255,255,255,0.07)', borderRadius:99 }}>
+                <div style={{ height:'100%', width:`${(xp/xpMax)*100}%`, background:accent,
+                  borderRadius:99, boxShadow:`0 0 10px ${accent}88` }}/>
+              </div>
+            </div>
+            <div style={{ display:'flex', gap:16 }}>
+              {[['342 km','Distanz'],['12','Runs'],['87','Fires'],['#3','Rang']].map(([v,l])=>(
+                <div key={l} style={{ textAlign:'center' }}>
+                  <div style={{ fontFamily:"'Space Mono',monospace", fontSize:15, color:'#e8e4dc', fontWeight:700 }}>{v}</div>
+                  <div style={{ fontSize:8, letterSpacing:'0.12em', color:'#5a5550', textTransform:'uppercase' }}>{l}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div style={{ padding:'0 16px 16px' }}>
+            <Label accent={accent}>Avatar Konfigurator</Label>
+            <div style={{ background:cardStyle==='solid'?'#181411':'rgba(255,255,255,0.02)',
+              border:`1px solid rgba(255,255,255,0.08)`, borderRadius:16, padding:'16px' }}>
+              <div style={{ display:'flex', justifyContent:'center', marginBottom:18 }}>
+                <div style={{ background:'#0c0a07', borderRadius:12, padding:'16px 24px',
+                  border:`1px solid ${accent}33`, boxShadow:`0 0 24px ${accent}18` }}>
+                  <PixelAvatar tier="rookie" px={5} accentColor={accent}
+                    bikeColor={bikeConfig.bikeColor} jerseyJ={bikeConfig.jerseyJ}
+                    jerseyD={bikeConfig.jerseyD} bikeType={bikeConfig.bikeType} suspType={bikeConfig.susp}/>
+                </div>
+              </div>
+
+              <ConfigRow label="Fahrrad-Typ">
+                <SegBtn options={['Hardtail','Fully']}
+                  active={bikeConfig.bikeType==='fully'?'Fully':'Hardtail'}
+                  onChange={v => set('bikeType', v==='Fully'?'fully':'hardtail')}
+                  accent={accent}/>
+              </ConfigRow>
+
+              <ConfigRow label="Federgabel / Dämpfer">
+                <SegBtn options={['Air','Coil']}
+                  active={bikeConfig.susp==='coil'?'Coil':'Air'}
+                  onChange={v => set('susp', v.toLowerCase())}
+                  accent={accent}/>
+              </ConfigRow>
+
+              <ConfigRow label="Rahmen-Material">
+                <SegBtn options={['Aluminium','Carbon']}
+                  active={bikeConfig.material==='carbon'?'Carbon':'Aluminium'}
+                  onChange={v => set('material', v.toLowerCase())}
+                  accent={accent}/>
+              </ConfigRow>
+
+              <ConfigRow label="Rahmen-Farbe">
+                <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
+                  {bikeColorOpts.map(c=>(
+                    <button key={c} onClick={()=>set('bikeColor',c)} style={{
+                      width:30, height:30, borderRadius:7, background:c, cursor:'pointer',
+                      border:bikeConfig.bikeColor===c?`2.5px solid ${accent}`:'2.5px solid transparent',
+                      boxShadow:bikeConfig.bikeColor===c?`0 0 12px ${accent}99`:'none',
+                      transition:'all 0.1s',
+                    }}/>
+                  ))}
+                </div>
+              </ConfigRow>
+
+              <ConfigRow label="Trikot-Farbe">
+                <div style={{ display:'flex', gap:8 }}>
+                  {jerseyOpts.map((j,i)=>(
+                    <button key={i} onClick={()=>onBikeConfigChange({...bikeConfig,jerseyJ:j.J,jerseyD:j.D})} style={{
+                      width:30, height:30, borderRadius:7, background:j.J, cursor:'pointer',
+                      border:bikeConfig.jerseyJ===j.J?`2.5px solid ${accent}`:'2.5px solid transparent',
+                      boxShadow:bikeConfig.jerseyJ===j.J?`0 0 12px ${accent}88`:'none',
+                      transition:'all 0.1s',
+                    }}/>
+                  ))}
+                </div>
+              </ConfigRow>
+            </div>
+          </div>
+
+          <div style={{ padding:'0 16px 16px' }}>
+            <Label accent={accent}>Achievements</Label>
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:8 }}>
+              {ACHIEVEMENTS.map(a=>(
+                <div key={a.id} style={{ border:`1px solid ${a.unlocked?a.color+'44':'rgba(255,255,255,0.06)'}`,
+                  borderRadius:12, padding:'10px 8px', textAlign:'center',
+                  background:a.unlocked?`${a.color}09`:'rgba(255,255,255,0.01)', opacity:a.unlocked?1:0.38 }}>
+                  <div style={{ width:24, height:24, borderRadius:6, margin:'0 auto 6px',
+                    background:a.unlocked?`${a.color}1a`:'rgba(255,255,255,0.04)',
+                    border:`1px solid ${a.unlocked?a.color+'44':'rgba(255,255,255,0.1)'}`,
+                    display:'flex', alignItems:'center', justifyContent:'center' }}>
+                    <div style={{ width:8, height:8, borderRadius:'50%', background:a.unlocked?a.color:'#333' }}/>
+                  </div>
+                  <div style={{ fontSize:9, color:a.unlocked?'#e8e4dc':'#5a5550', fontWeight:700, lineHeight:1.3 }}>
+                    {a.label}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // APP SHELL
+    // ═══════════════════════════════════════════════════════════
+
+    const ICONS = {
+      dashboard: c => (
+        <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+          <circle cx="11" cy="11" r="8.5" stroke={c} strokeWidth="1.4"/>
+          <path d="M11 11L7.5 7.5" stroke={c} strokeWidth="1.5" strokeLinecap="round"/>
+          <circle cx="11" cy="11" r="1.5" fill={c}/>
+          <path d="M5.5 14.5A7 7 0 0115 5.5" stroke={c} strokeWidth="1.4" strokeLinecap="round" opacity="0.35"/>
+        </svg>
+      ),
+      feed: c => (
+        <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+          <rect x="2" y="4" width="18" height="14" rx="3" stroke={c} strokeWidth="1.4"/>
+          <polygon points="9,8.5 15.5,11 9,13.5" fill={c}/>
+        </svg>
+      ),
+      leaderboard: c => (
+        <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+          <rect x="1"  y="13" width="6" height="8" rx="1" fill={c} opacity="0.45"/>
+          <rect x="8"  y="8"  width="6" height="13" rx="1" fill={c}/>
+          <rect x="15" y="10" width="6" height="11" rx="1" fill={c} opacity="0.45"/>
+          <path d="M6.5 5.5L11 2l4.5 3.5" stroke={c} strokeWidth="1.4" strokeLinejoin="round"/>
+        </svg>
+      ),
+      profile: c => (
+        <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+          <circle cx="11" cy="7" r="3.5" stroke={c} strokeWidth="1.4"/>
+          <path d="M3 20c0-4.4 3.6-8 8-8s8 3.6 8 8" stroke={c} strokeWidth="1.4" strokeLinecap="round"/>
+        </svg>
+      ),
+    };
+
+    function AppHeader({ accent, bikeConfig }) {
+      return (
+        <div style={{
+          height:48, display:'flex', alignItems:'center', justifyContent:'space-between',
+          padding:'0 16px',
+          borderBottom:'1px solid rgba(255,255,255,0.06)',
+          background:'rgba(12,10,7,0.95)',
+          backdropFilter:'blur(8px)',
+        }}>
+          <div style={{ lineHeight:1 }}>
+            <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:22, letterSpacing:'0.12em', color:'#e8e4dc' }}>MOE MOEA</div>
+            <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:11, letterSpacing:'0.28em', color:'#cc1a1a', marginTop:-1 }}>TRAILS</div>
+          </div>
+          <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+            <div style={{ width:6, height:6, borderRadius:'50%', background:accent, boxShadow:`0 0 8px ${accent}` }}/>
+            <div style={{ width:36, height:36, borderRadius:9, background:'#181411',
+              border:`1.5px solid ${accent}44`,
+              display:'flex', alignItems:'center', justifyContent:'center',
+              overflow:'hidden', boxShadow:`0 0 14px ${accent}22` }}>
+              <PixelAvatar tier="rookie" px={2} accentColor={accent}
+                bikeColor={bikeConfig.bikeColor} jerseyJ={bikeConfig.jerseyJ}
+                jerseyD={bikeConfig.jerseyD} bikeType={bikeConfig.bikeType} suspType={bikeConfig.susp}/>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function TabBar({ active, onChange, accent }) {
+      const tabs = [
+        { id:'dashboard',   label:'Dashboard' },
+        { id:'feed',        label:'Feed'       },
+        { id:'leaderboard', label:'Rangliste'  },
+        { id:'profile',     label:'Profil'     },
+      ];
+      return (
+        <div style={{ position:'absolute', bottom:0, left:0, right:0, zIndex:30,
+          background:'rgba(10,8,5,0.97)', borderTop:'1px solid rgba(255,255,255,0.07)',
+          display:'flex', paddingBottom:26 }}>
+          {tabs.map(tab => {
+            const on = active === tab.id;
+            return (
+              <button key={tab.id} onClick={() => onChange(tab.id)} style={{
+                flex:1, background:'none', border:'none', cursor:'pointer',
+                padding:'9px 0 4px', display:'flex', flexDirection:'column',
+                alignItems:'center', gap:3, color:on?accent:'#3a3530', transition:'color 0.15s',
+              }}>
+                {ICONS[tab.id](on?accent:'#3a3530')}
+                <span style={{ fontFamily:"'Space Grotesk',sans-serif", fontSize:8, fontWeight:on?700:500,
+                  letterSpacing:'0.07em', textTransform:'uppercase' }}>{tab.label}</span>
+                {on && <div style={{ width:18, height:2, borderRadius:99, background:accent,
+                  boxShadow:`0 0 7px ${accent}`, marginTop:1 }}/>}
+              </button>
+            );
+          })}
+        </div>
+      );
+    }
+
+    function UploadModal({ onClose, accent }) {
+      const [step, setStep]       = useState(0);
+      const [recording, setRec]   = useState(false);
+      const [elapsed, setElapsed] = useState(0);
+      const [uploading, setUploading] = useState(false);
+      const [done, setDone]       = useState(false);
+
+      useEffect(() => {
+        if (!recording) return;
+        const id = setInterval(() => setElapsed(t => t+1), 1000);
+        return () => clearInterval(id);
+      }, [recording]);
+
+      useEffect(() => {
+        if (!uploading) return;
+        const id = setTimeout(() => { setUploading(false); setDone(true); }, 2200);
+        return () => clearTimeout(id);
+      }, [uploading]);
+
+      const fmt = s => `${Math.floor(s/60).toString().padStart(2,'0')}:${(s%60).toString().padStart(2,'0')}`;
+      const stepLabel = ['QR CODE','AUFNEHMEN','HOCHLADEN'];
+
+      return (
+        <div style={{ position:'absolute', inset:0, zIndex:50, background:'rgba(6,5,3,0.98)',
+          display:'flex', flexDirection:'column', fontFamily:"'Space Grotesk',sans-serif" }}>
+          <div style={{ padding:'14px 16px 10px', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+            <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:20, letterSpacing:'0.14em', color:'#e8e4dc' }}>
+              Video Einreichen
+            </div>
+            <button onClick={onClose} style={{ background:'none', border:'1px solid rgba(255,255,255,0.1)',
+              borderRadius:8, width:30, height:30, cursor:'pointer',
+              color:'#5a5550', fontSize:16, display:'flex', alignItems:'center', justifyContent:'center' }}>✕</button>
+          </div>
+
+          <div style={{ display:'flex', gap:6, padding:'0 16px 20px' }}>
+            {stepLabel.map((s,i) => (
+              <div key={i} style={{ flex:1, textAlign:'center' }}>
+                <div style={{ height:2, borderRadius:99, marginBottom:5, background:step>=i?accent:'rgba(255,255,255,0.08)' }}/>
+                <div style={{ fontSize:7, letterSpacing:'0.12em', color:step>=i?accent:'#3a3530', textTransform:'uppercase' }}>{s}</div>
+              </div>
+            ))}
+          </div>
+
+          {step===0 && (
+            <div style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center',
+              justifyContent:'center', padding:'0 24px', gap:18, textAlign:'center' }}>
+              <div style={{ padding:12, border:`2px solid ${accent}`, borderRadius:14,
+                boxShadow:`0 0 32px ${accent}33`, background:`${accent}06` }}>
+                <svg width="80" height="80" viewBox="0 0 7 7">
+                  {[
+                    [0,0],[1,0],[2,0],[0,1],[2,1],[0,2],[1,2],[2,2],
+                    [4,0],[5,0],[6,0],[4,1],[6,1],[4,2],[5,2],[6,2],
+                    [0,4],[1,4],[2,4],[0,5],[2,5],[0,6],[1,6],[2,6],
+                    [3,0],[3,3],[3,6],[1,3],[5,3],[4,4],[6,4],[5,5],[3,5],[4,6],[6,6],
+                  ].map(([cx,cy],i)=>(
+                    <rect key={i} x={cx} y={cy} width="1" height="1" fill={accent}/>
+                  ))}
+                </svg>
+              </div>
+              <div style={{ fontSize:18, fontWeight:700, color:'#e8e4dc' }}>QR-Code scannen</div>
+              <div style={{ fontSize:12, color:'#5a5550', lineHeight:1.7 }}>
+                Halte die Kamera vor den QR-Code<br/>am Photo-Spot des Trails.<br/>Er muss am Anfang des Videos sichtbar sein!
+              </div>
+              <div style={{ width:'100%', background:'rgba(255,255,255,0.03)',
+                border:'1px solid rgba(255,255,255,0.08)', borderRadius:12, padding:'12px 14px', textAlign:'left' }}>
+                {['QR-Code am Spot aufsuchen','Code vollständig im Bild halten','Grünes Licht abwarten'].map((t,i)=>(
+                  <div key={i} style={{ display:'flex', alignItems:'center', gap:10, padding:'4px 0' }}>
+                    <div style={{ width:18, height:18, borderRadius:'50%', border:`1.5px solid ${accent}`,
+                      display:'flex', alignItems:'center', justifyContent:'center',
+                      fontSize:8, color:accent, flexShrink:0, fontFamily:"'Space Mono',monospace" }}>{i+1}</div>
+                    <span style={{ fontSize:12, color:'#7a7570' }}>{t}</span>
+                  </div>
+                ))}
+              </div>
+              <button onClick={() => setStep(1)} style={{ width:'100%', background:accent, border:'none',
+                borderRadius:12, padding:'14px', cursor:'pointer', fontSize:14, fontWeight:700, color:'#000',
+                letterSpacing:'0.04em' }}>QR erkannt → Weiter</button>
+            </div>
+          )}
+
+          {step===1 && (
+            <div style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center',
+              justifyContent:'center', padding:'0 24px', gap:18, textAlign:'center' }}>
+              <div style={{ width:180, height:130, border:`2px solid ${recording?'#ff3333':accent}`,
+                borderRadius:10, position:'relative', background:'#080604',
+                boxShadow:recording?'0 0 32px #ff333333':`0 0 20px ${accent}22`, overflow:'hidden' }}>
+                {[[0,0,'top','left'],[0,1,'top','right'],[1,0,'bottom','left'],[1,1,'bottom','right']].map(([r,c,vt,hz],i) => (
+                  <div key={i} style={{ position:'absolute', width:14, height:14, [vt]:-1, [hz]:-1,
+                    borderTop:r===0?`3px solid ${recording?'#ff3333':accent}`:'none',
+                    borderBottom:r===1?`3px solid ${recording?'#ff3333':accent}`:'none',
+                    borderLeft:c===0?`3px solid ${recording?'#ff3333':accent}`:'none',
+                    borderRight:c===1?`3px solid ${recording?'#ff3333':accent}`:'none',
+                  }}/>
+                ))}
+                <div style={{ position:'absolute', inset:0, display:'flex', flexDirection:'column',
+                  alignItems:'center', justifyContent:'center', gap:8 }}>
+                  {recording && (
+                    <div style={{ width:8, height:8, borderRadius:'50%', background:'#ff3333',
+                      boxShadow:'0 0 10px #ff3333', animation:'pulse 1s ease-in-out infinite' }}/>
+                  )}
+                  <div style={{ fontFamily:"'Space Mono',monospace", fontSize:24, fontWeight:700,
+                    color:recording?'#ff3333':accent }}>{fmt(elapsed)}</div>
+                  {!recording && <div style={{ fontSize:9, color:'#3a3530', letterSpacing:'0.1em' }}>BEREIT</div>}
+                </div>
+              </div>
+              <div style={{ fontSize:12, color:'#5a5550', lineHeight:1.6 }}>
+                {recording?'Aufnahme läuft — QR-Code muss am Anfang sichtbar sein':'Starte die Aufnahme. QR-Code zuerst ins Bild!'}
+              </div>
+              {!recording
+                ? <button onClick={() => setRec(true)} style={{ width:'100%', background:accent, border:'none',
+                    borderRadius:12, padding:'14px', cursor:'pointer', fontSize:14, fontWeight:700, color:'#000' }}>
+                    ● Aufnahme starten
+                  </button>
+                : <button onClick={() => { setRec(false); setStep(2); }} style={{
+                    width:'100%', background:'rgba(255,51,51,0.12)', border:'1.5px solid #ff3333',
+                    borderRadius:12, padding:'14px', cursor:'pointer', fontSize:14, fontWeight:700, color:'#ff3333' }}>
+                    ■ Stoppen & weiter
+                  </button>
+              }
+            </div>
+          )}
+
+          {step===2 && (
+            <div style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center',
+              justifyContent:'center', padding:'0 24px', gap:18, textAlign:'center' }}>
+              {done ? (
+                <>
+                  <div style={{ width:64, height:64, borderRadius:'50%', background:`${accent}18`,
+                    border:`2px solid ${accent}`, display:'flex', alignItems:'center', justifyContent:'center',
+                    boxShadow:`0 0 32px ${accent}44` }}>
+                    <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
+                      <path d="M5 13l6 6L21 7" stroke={accent} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </div>
+                  <div style={{ fontSize:20, fontWeight:700, color:accent }}>Clip eingereicht!</div>
+                  <div style={{ fontSize:12, color:'#5a5550', lineHeight:1.7 }}>
+                    Dein Video wurde validiert und ist<br/>jetzt im Feed sichtbar.<br/>Die Community kann abstimmen.
+                  </div>
+                  <button onClick={onClose} style={{ width:'100%', background:accent, border:'none',
+                    borderRadius:12, padding:'14px', cursor:'pointer', fontSize:14, fontWeight:700, color:'#000' }}>Fertig</button>
+                </>
+              ) : (
+                <>
+                  <div style={{ width:56, height:56, borderRadius:'50%', background:'rgba(255,255,255,0.03)',
+                    border:'1px solid rgba(255,255,255,0.09)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                      <path d="M12 19V5M12 5L7 10M12 5l5 5" stroke={accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d="M3 19h18" stroke={accent} strokeWidth="2" strokeLinecap="round"/>
+                    </svg>
+                  </div>
+                  <div style={{ fontSize:18, fontWeight:700, color:'#e8e4dc' }}>Clip hochladen</div>
+                  <div style={{ fontSize:12, color:'#5a5550' }}>
+                    Aufnahme: {fmt(elapsed)} · QR-Code validiert ✓
+                  </div>
+                  {uploading && (
+                    <div style={{ width:'100%' }}>
+                      <div style={{ height:5, background:'rgba(255,255,255,0.07)', borderRadius:99, overflow:'hidden' }}>
+                        <div style={{ height:'100%', background:accent, borderRadius:99,
+                          animation:'upload-bar 2.2s linear forwards' }}/>
+                      </div>
+                      <div style={{ fontSize:10, color:'#5a5550', marginTop:8 }}>Wird hochgeladen...</div>
+                    </div>
+                  )}
+                  <button onClick={() => setUploading(true)} disabled={uploading} style={{
+                    width:'100%', background:uploading?'rgba(255,255,255,0.04)':accent, border:'none',
+                    borderRadius:12, padding:'14px', fontSize:14, fontWeight:700,
+                    color:uploading?'#3a3530':'#000', cursor:uploading?'not-allowed':'pointer' }}>
+                    {uploading?'Wird hochgeladen…':'▲ Hochladen & einreichen'}
+                  </button>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    function ScreenWrap({ children, id }) {
+      const [vis, setVis] = useState(false);
+      useEffect(() => { const t=setTimeout(()=>setVis(true),30); return ()=>clearTimeout(t); }, []);
+      useEffect(() => { setVis(false); }, [id]);
+      return (
+        <div style={{ opacity:vis?1:0, transform:vis?'translateY(0)':'translateY(5px)',
+          transition:'opacity 0.18s ease, transform 0.18s ease', height:'100%', overflowY:'auto' }}>
+          {children}
+        </div>
+      );
+    }
+
+    const TWEAK_DEFAULTS = {
+      accent: '#39ff14',
+      cardStyle: 'glass',
+      dashLayout: 'hud',
+    };
+
+    function App() {
+      const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+      const [activeTab, setActiveTab] = useState('dashboard');
+      const [uploadOpen, setUploadOpen] = useState(false);
+      const [bikeConfig, setBikeConfig] = useState({
+        bikeType:  'hardtail',
+        bikeColor: '#1a1a1a',
+        susp:      'air',
+        material:  'alu',
+        jerseyJ:   '#e8e4dc',
+        jerseyD:   '#9a9890',
+      });
+
+      const sp = { accent:t.accent, cardStyle:t.cardStyle, dashLayout:t.dashLayout, bikeConfig };
+      const screens = {
+        dashboard:   <DashboardScreen   {...sp}/>,
+        feed:        <FeedScreen        {...sp} onUpload={() => setUploadOpen(true)}/>,
+        leaderboard: <LeaderboardScreen {...sp}/>,
+        profile:     <ProfileScreen     {...sp} onBikeConfigChange={setBikeConfig}/>,
+      };
+
+      return (
+        <>
+          <IOSDevice width={393} height={852} dark>
+            <div style={{ position:'absolute', top:0, left:0, right:0, height:64, zIndex:5, pointerEvents:'none',
+              background:`linear-gradient(to bottom, ${t.accent}0e 0%, transparent 100%)` }}/>
+
+            <div style={{ position:'absolute', top:60, left:0, right:0, bottom:0, background:'#0c0a07', overflow:'hidden' }}>
+              <AppHeader accent={t.accent} bikeConfig={bikeConfig}/>
+              <div style={{ position:'absolute', top:48, left:0, right:0, bottom:0, overflow:'hidden' }}>
+                <ScreenWrap key={activeTab} id={activeTab}>
+                  <div style={{ paddingTop:6 }}>
+                    {screens[activeTab]}
+                  </div>
+                </ScreenWrap>
+              </div>
+              {uploadOpen && (
+                <div style={{ position:'absolute', top:48, left:0, right:0, bottom:66, zIndex:40 }}>
+                  <UploadModal onClose={() => setUploadOpen(false)} accent={t.accent}/>
+                </div>
+              )}
+            </div>
+
+            <TabBar active={activeTab} onChange={setActiveTab} accent={t.accent}/>
+          </IOSDevice>
+
+          <TweaksPanel title="Tweaks">
+            <TweakSection label="Akzentfarbe"/>
+            <TweakColor label="Farbe" value={t.accent}
+              options={['#39ff14','#00e5ff','#ff6b00','#bf00ff','#ffd700']}
+              onChange={v => setTweak('accent', v)}/>
+            <TweakSection label="Kartenstil"/>
+            <TweakRadio label="Stil" value={t.cardStyle}
+              options={['outlined','glass','solid']}
+              onChange={v => setTweak('cardStyle', v)}/>
+            <TweakSection label="Dashboard"/>
+            <TweakRadio label="Layout" value={t.dashLayout}
+              options={['hud','cards']}
+              onChange={v => setTweak('dashLayout', v)}/>
+          </TweaksPanel>
+        </>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+  </script>
+</body>
+</html>

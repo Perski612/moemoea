@@ -1,0 +1,30 @@
+{
+  "expo": {
+    "name": "MOE MOEA Trails",
+    "slug": "moe-moea-trails",
+    "version": "1.0.0",
+    "scheme": "moemoeatrails",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "backgroundColor": "#0c0a07"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "de.moemoea.trails"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#0c0a07"
+      },
+      "package": "de.moemoea.trails"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
