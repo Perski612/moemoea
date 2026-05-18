@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { ScrollView, View, Text, TouchableOpacity, StyleSheet, Modal } from 'react-native'
 import Svg, { Rect, Circle, Path, Polygon } from 'react-native-svg'
 import { AppHeader } from '@/components/ui/AppHeader'
-import { PixelAvatar } from '@/components/PixelAvatar'
+import { UserAvatar } from '@/components/UserAvatar'
 import { Colors, Fonts, Radius } from '@/constants/theme'
 import { useFeedStore } from '@/stores/useFeedStore'
 import { useAuthStore } from '@/stores/useAuthStore'
@@ -219,7 +219,7 @@ export default function FeedScreen() {
                   </View>
               }
               <View style={s.feedMeta}>
-                <PixelAvatar tier={post.tier as any} px={2} accentColor={accent} />
+                <UserAvatar userId={post.userId} size={34} />
                 <View style={{ flex: 1 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
                     <Text style={s.feedUser}>{post.username}</Text>

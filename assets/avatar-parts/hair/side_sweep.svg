@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="144" height="240" viewBox="0 0 144 240" shape-rendering="crispEdges">
+  <rect width="144" height="240" fill="none"/>
+  <style>
+    :root { --hair:#4b4b4b; --hairDark:#151515; --hairMid:#303030; --hairLight:#777777; --hairSoft:#626262; }
+  </style>
+
+  <rect x="56" y="18" width="34" height="4" fill="var(--hairDark)"/>
+  <rect x="42" y="22" width="58" height="4" fill="var(--hairDark)"/>
+  <rect x="34" y="26" width="72" height="8" fill="var(--hairDark)"/>
+  <rect x="28" y="34" width="86" height="14" fill="var(--hairDark)"/>
+  <rect x="26" y="48" width="94" height="18" fill="var(--hairDark)"/>
+  <rect x="24" y="62" width="18" height="28" fill="var(--hairDark)"/>
+  <rect x="110" y="38" width="10" height="22" fill="var(--hairDark)"/>
+
+  <rect x="44" y="26" width="52" height="8" fill="var(--hair)"/>
+  <rect x="34" y="34" width="74" height="12" fill="var(--hair)"/>
+  <rect x="32" y="46" width="78" height="14" fill="var(--hair)"/>
+  <rect x="30" y="60" width="24" height="22" fill="var(--hairMid)"/>
+  <rect x="56" y="58" width="18" height="26" fill="var(--hairMid)"/>
+  <rect x="78" y="54" width="22" height="24" fill="var(--hairMid)"/>
+  <rect x="100" y="42" width="10" height="22" fill="var(--hairMid)"/>
+
+  <rect x="34" y="52" width="8" height="30" fill="var(--hairDark)"/>
+  <rect x="46" y="58" width="8" height="26" fill="var(--hairDark)"/>
+  <rect x="62" y="56" width="8" height="30" fill="var(--hairDark)"/>
+  <rect x="78" y="52" width="8" height="24" fill="var(--hairDark)"/>
+  <rect x="94" y="46" width="8" height="22" fill="var(--hairDark)"/>
+
+  <rect x="42" y="30" width="12" height="8" fill="var(--hairLight)"/>
+  <rect x="58" y="28" width="10" height="8" fill="var(--hairSoft)"/>
+  <rect x="72" y="30" width="10" height="8" fill="var(--hairLight)"/>
+  <rect x="88" y="34" width="12" height="8" fill="var(--hairSoft)"/>
+  <rect x="52" y="42" width="10" height="8" fill="var(--hairLight)"/>
+  <rect x="68" y="42" width="8" height="8" fill="var(--hairSoft)"/>
+  <rect x="84" y="44" width="8" height="8" fill="var(--hairLight)"/>
+
+  <rect x="24" y="78" width="10" height="10" fill="var(--hairDark)"/>
+  <rect x="54" y="78" width="8" height="10" fill="var(--hairDark)"/>
+  <rect x="72" y="76" width="8" height="10" fill="var(--hairDark)"/>
+</svg>

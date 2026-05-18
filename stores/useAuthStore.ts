@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import type { Models } from 'appwrite'
-import { account, databases, DB_ID, PROFILES_ID } from '@/lib/appwrite'
+import { account, databases, DB_ID, PROFILES_ID, IS_DEMO } from '@/lib/appwrite'
 
 interface AuthState {
   session: Models.Session | null
@@ -17,6 +17,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   isAdmin: false,
 
   checkSession: async () => {
+    if (IS_DEMO) return
     try {
       const session = await account.getSession('current')
       const profile = await databases.getDocument(DB_ID, PROFILES_ID, session.userId)

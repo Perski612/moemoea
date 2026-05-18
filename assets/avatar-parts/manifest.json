@@ -1,0 +1,28 @@
+{
+  "canvas": { "width": 144, "height": 240 },
+  "body": ["body/base_body.svg"],
+  "hair": [
+    "hair/messy_front.svg",
+    "hair/side_sweep.svg",
+    "hair/long_twin.svg",
+    "hair/receding.svg",
+    "hair/topknot.svg",
+    "hair/straight_bangs.svg"
+  ],
+  "eyes": [
+    "eyes/green_default.svg",
+    "eyes/sleepy.svg",
+    "eyes/round.svg",
+    "eyes/side_look.svg",
+    "eyes/thin.svg"
+  ],
+  "glasses": [
+    "glasses/none.svg",
+    "glasses/clear_rect.svg",
+    "glasses/shades.svg"
+  ],
+  "clothes": [
+    "clothes/shirt_template.svg",
+    "clothes/shorts_template.svg"
+  ]
+}

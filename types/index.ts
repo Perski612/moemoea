@@ -16,12 +16,24 @@ export interface Profile {
 export interface BikeConfig {
   $id: string
   userId: string
-  bikeType: 'hardtail' | 'fully'
+  bikeType: 'hardtail' | 'enduro' | 'downhill'
   suspension: 'air' | 'coil'
   material: 'alu' | 'carbon'
   bikeColor: string
   jerseyJ: string
   jerseyD: string
+  hairColor?: string
+  skinColor?: string
+  eyeColor?: string
+  shirtColor?: string
+  pantsColor?: string
+  hairStyle?: 'short' | 'long' | 'curly'
+  avatarPresetId?: string
+  avatarUrl?: string
+  marke?: string
+  modell?: string
+  federweg_v?: string
+  federweg_h?: string
 }
 
 export interface Session {

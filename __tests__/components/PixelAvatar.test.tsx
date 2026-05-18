@@ -8,8 +8,8 @@ describe('PixelAvatar', () => {
     expect(toJSON()).toMatchSnapshot()
   })
 
-  it('rendert Fully-Bike mit Coil-Fork anders als Hardtail-Air', () => {
-    const { toJSON: toJSONFully } = render(<PixelAvatar bikeType="fully" suspType="coil" />)
+  it('rendert Enduro-Bike mit Coil-Fork anders als Hardtail-Air', () => {
+    const { toJSON: toJSONFully } = render(<PixelAvatar bikeType="enduro" suspType="coil" />)
     const { toJSON: toJSONHardtail } = render(<PixelAvatar bikeType="hardtail" suspType="air" />)
     expect(JSON.stringify(toJSONFully())).not.toBe(JSON.stringify(toJSONHardtail()))
   })

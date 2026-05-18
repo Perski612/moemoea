@@ -1,9 +1,6 @@
-import { useState, useEffect } from 'react'
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Dimensions, Image } from 'react-native'
-import Svg, {
-  Defs, Pattern,
-  Rect, Circle, Path, Line, Text as SvgText, G, Polygon
-} from 'react-native-svg'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { Animated, Image, PanResponder, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import { useFocusEffect } from 'expo-router'
 import { AppHeader } from '@/components/ui/AppHeader'
 import { Colors, Fonts } from '@/constants/theme'
 import { useRunStore } from '@/stores/useRunStore'
@@ -11,42 +8,25 @@ import { useRunStore } from '@/stores/useRunStore'
 type Rider = { name: string; time: string; delta: string; tier: string; fastest: boolean; isMe?: boolean }
 
 const accent = Colors.accent
-const { height: SCREEN_H } = Dimensions.get('window')
+const PANEL_COMPACT = 0.47
+const PANEL_EXPANDED = 0.88
 
-// ── TRAIL DATA ────────────────────────────────────────────────────────────────
+// ── TRAIL DATA (image coords 1668×2157) ──────────────────────────────────────
+// Sector split at the red tick marks in the photo ~(636, 700)
 
 const P1_PATH =
-  'M 241,8 ' +
-  'C 238,42 234,75 232,105 ' +
-  'C 230,119 229,127 229,134 ' +
-  'C 232,138 236,142 237,144 ' +
-  'C 238,146 228,155 220,159 ' +
-  'C 212,163 210,167 212,171 ' +
-  'C 214,175 222,178 224,183 ' +
-  'C 226,187 219,191 213,195 ' +
-  'C 207,199 203,203 204,208 ' +
-  'C 205,213 213,217 215,221 ' +
-  'C 217,225 208,229 202,232 ' +
-  'C 196,234 195,235 195,236'
+  'M 752,47 L 725,130 L 710,200 L 706,275 ' +
+  'L 718,338 L 703,385 L 718,440 L 703,490 ' +
+  'L 716,540 L 702,585 L 663,655 L 636,700'
 
 const P2_PATH =
-  'M 195,236 ' +
-  'C 200,241 202,244 202,245 ' +
-  'C 202,246 193,257 191,260 ' +
-  'C 189,263 197,273 200,276 ' +
-  'C 203,279 191,290 174,295 ' +
-  'C 161,302 154,304 154,306 ' +
-  'C 142,312 131,322 128,333 ' +
-  'C 112,348 97,353 97,356 ' +
-  'C 85,365 74,371 71,371 ' +
-  'C 67,373 61,382 59,390 ' +
-  'C 58,396 67,403 81,407 ' +
-  'C 89,409 94,405 95,400 ' +
-  'C 96,395 89,389 79,387 ' +
-  'C 69,385 59,387 51,390 ' +
-  'C 43,393 32,405 19,411'
-
-const FULL_PATH = P1_PATH + ' ' + P2_PATH
+  'M 636,700 L 600,790 L 560,880 L 530,960 ' +
+  'L 500,1040 L 468,1120 L 435,1200 L 400,1280 ' +
+  'L 365,1360 L 330,1440 L 298,1516 L 270,1585 ' +
+  'L 248,1645 L 225,1700 L 205,1748 ' +
+  'L 190,1778 L 215,1800 L 252,1808 L 278,1795 ' +
+  'L 286,1768 L 270,1745 L 243,1738 L 215,1748 ' +
+  'L 200,1770 L 200,1790 L 183,1793'
 
 const SECTORS = [
   {
@@ -55,8 +35,8 @@ const SECTORS = [
     dist: '680m', descent: '62m',
     color: '#a78bfa',
     pathD: P1_PATH,
-    labelX: 218, labelY: 131,
-    jumpMarkers: [{ x: 225, y: 160, speed: '37 km/h', airtime: '1.4s', name: 'Kicker' }],
+    labelX: 920, labelY: 250,
+    jumpMarkers: [{ x: 712, y: 456, speed: '37 km/h', airtime: '1.4s', name: 'Kicker' }],
     riders: [
       { name: 'TrailKing_Max',   time: '42.8', delta: '—',    tier: 'veteran', fastest: true },
       { name: 'DirtQueen_Sara',  time: '43.5', delta: '+0.7', tier: 'rookie' },
@@ -71,8 +51,8 @@ const SECTORS = [
     dist: '520m', descent: '48m',
     color: '#34d399',
     pathD: P2_PATH,
-    labelX: 113, labelY: 318,
-    jumpMarkers: [{ x: 74, y: 372, speed: '44 km/h', airtime: '1.9s', name: 'Sender' }],
+    labelX: 680, labelY: 1100,
+    jumpMarkers: [{ x: 454, y: 1129, speed: '44 km/h', airtime: '1.9s', name: 'Sender' }],
     note: '↻ Loop-Sektion am Ende',
     riders: [
       { name: 'TrailKing_Max',   time: '31.4', delta: '—',    tier: 'veteran', fastest: true },
@@ -90,12 +70,21 @@ const TIER_COLOR: Record<string, string> = { rookie: '#99EA57', veteran: '#ffd70
 
 type SectorWithRiders = Omit<typeof SECTORS[0], 'riders'> & { riders: Rider[] }
 
-function SectorPanel({ sector, onClose }: { sector: SectorWithRiders; onClose: () => void }) {
+function SectorPanel({
+  sector,
+  onClose,
+  dragHandlers,
+}: {
+  sector: SectorWithRiders
+  onClose: () => void
+  dragHandlers: any
+}) {
   return (
     <View style={p.panel}>
       {/* Handle */}
-      <View style={{ alignItems: 'center', paddingTop: 10, paddingBottom: 4 }}>
+      <View style={{ alignItems: 'center', paddingTop: 10, paddingBottom: 4 }} {...dragHandlers}>
         <View style={p.handle} />
+        <Text style={p.dragHint}>ziehen zum Vergrößern</Text>
       </View>
 
       {/* Sector header */}
@@ -171,8 +160,10 @@ export default function StreckeScreen() {
   const { getLeaderboard } = useRunStore()
   const [p1Riders, setP1Riders] = useState<Rider[]>([])
   const [p2Riders, setP2Riders] = useState<Rider[]>([])
+  const panelHeight = useRef(new Animated.Value(PANEL_COMPACT)).current
+  const dragStartHeight = useRef(PANEL_COMPACT)
 
-  useEffect(() => {
+  const loadLeaderboards = useCallback(() => {
     getLeaderboard('time', 'p1', 5).then(entries => {
       const leader = entries[0]?.value ?? 0
       setP1Riders(entries.map((e, i) => ({
@@ -193,7 +184,46 @@ export default function StreckeScreen() {
         fastest: i === 0,
       })))
     })
-  }, [])
+  }, [getLeaderboard])
+
+  useFocusEffect(loadLeaderboards)
+
+  useEffect(() => {
+    Animated.spring(panelHeight, {
+      toValue: sel ? PANEL_COMPACT : 0,
+      useNativeDriver: false,
+      friction: 8,
+      tension: 90,
+    }).start()
+  }, [panelHeight, sel])
+
+  const panelPanResponder = useMemo(() => PanResponder.create({
+    onStartShouldSetPanResponder: () => true,
+    onMoveShouldSetPanResponder: (_, gesture) => Math.abs(gesture.dy) > 4,
+    onPanResponderGrant: () => {
+      panelHeight.stopAnimation((value) => {
+        dragStartHeight.current = value
+      })
+    },
+    onPanResponderMove: (_, gesture) => {
+      const delta = -gesture.dy / 520
+      const next = Math.min(Math.max(dragStartHeight.current + delta, PANEL_COMPACT), PANEL_EXPANDED)
+      panelHeight.setValue(next)
+    },
+    onPanResponderRelease: (_, gesture) => {
+      panelHeight.stopAnimation((value) => {
+        const shouldExpand = gesture.vy < -0.35 || value > (PANEL_COMPACT + PANEL_EXPANDED) / 2
+        const shouldCollapse = gesture.vy > 0.35 || value < (PANEL_COMPACT + PANEL_EXPANDED) / 2
+        const target = shouldExpand && !shouldCollapse ? PANEL_EXPANDED : shouldCollapse ? PANEL_COMPACT : value
+        Animated.spring(panelHeight, {
+          toValue: target,
+          useNativeDriver: false,
+          friction: 8,
+          tension: 90,
+        }).start()
+      })
+    },
+  }), [panelHeight])
 
   const sectorsWithRiders: SectorWithRiders[] = SECTORS.map(s => ({
     ...s,
@@ -223,115 +253,34 @@ export default function StreckeScreen() {
           </View>
         </View>
 
-        {/* Map + Panel */}
-        <View style={{ flex: 1, margin: 10, marginTop: 0, borderRadius: 18, backgroundColor: '#0f0d0a', overflow: 'hidden', position: 'relative' }}>
-          <Svg
-            viewBox="0 0 250 430"
-            width="100%"
-            height="100%"
-            preserveAspectRatio="xMidYMid meet"
-            onPress={() => setSel(null)}
-          >
-            <Defs>
-              <Pattern id="tgrid" width={22} height={22} patternUnits="userSpaceOnUse">
-                <Path d="M 22 0 L 0 0 0 22" fill="none" stroke="rgba(255,255,255,0.025)" strokeWidth={0.5} />
-              </Pattern>
-            </Defs>
-
-            {/* Grid background */}
-            <Rect width={250} height={430} fill="url(#tgrid)" />
-
-            {/* Dim trail shadow */}
-            <Path d={FULL_PATH} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth={6} strokeLinecap="round" strokeLinejoin="round" />
-
-            {/* Sector paths */}
-            {sectorsWithRiders.map(sector => {
-              const isSel = sel === sector.id
-              const isDimmed = sel && !isSel
-              return (
-                <G key={sector.id} onPress={(e) => { e.stopPropagation?.(); setSel(isSel ? null : sector.id) }}>
-                  {/* Hit area */}
-                  <Path d={sector.pathD} fill="none" stroke="transparent" strokeWidth={32} strokeLinecap="round" />
-                  {/* Colored path */}
-                  <Path
-                    d={sector.pathD} fill="none"
-                    stroke={sector.color}
-                    strokeWidth={isSel ? 7.5 : 4.5}
-                    strokeLinecap="round" strokeLinejoin="round"
-                    opacity={isDimmed ? 0.14 : 0.9}
-                  />
-                  {/* Sector badge */}
-                  <Circle cx={sector.labelX} cy={sector.labelY} r={14}
-                    fill={isSel ? sector.color : '#0f0d0a'}
-                    stroke={sector.color} strokeWidth={isSel ? 0 : 2}
-                    opacity={isDimmed ? 0.1 : 1}
-                  />
-                  <SvgText
-                    x={sector.labelX} y={sector.labelY + 4}
-                    textAnchor="middle" fontSize={9} fontWeight="700"
-                    fill={isSel ? '#000' : sector.color}
-                    fontFamily={Fonts.mono}
-                    opacity={isDimmed ? 0.1 : 1}
-                  >{sector.id}</SvgText>
-                </G>
-              )
-            })}
-
-            {/* Part split markers */}
-            <G opacity={sel ? 0.2 : 0.9}>
-              <Line x1={189} y1={229} x2={200} y2={242} stroke="#cc2222" strokeWidth={3} strokeLinecap="round" />
-              <Line x1={193} y1={231} x2={204} y2={244} stroke="#cc2222" strokeWidth={3} strokeLinecap="round" />
-            </G>
-
-            {/* Jump markers */}
-            {sectorsWithRiders.map(sector =>
-              sector.jumpMarkers.map((jmp, ji) => {
-                const isDimmed = sel && sel !== sector.id
-                return (
-                  <G key={`${sector.id}-j${ji}`} opacity={isDimmed ? 0.06 : 0.92}>
-                    <Polygon
-                      points={`${jmp.x},${jmp.y - 7} ${jmp.x - 6},${jmp.y + 5} ${jmp.x + 6},${jmp.y + 5}`}
-                      fill="#fbbf24"
-                    />
-                    <SvgText x={jmp.x + 10} y={jmp.y + 1} fontSize={7} fill="#fbbf24" fontFamily={Fonts.mono} fontWeight="700">
-                      {jmp.speed}
-                    </SvgText>
-                    <SvgText x={jmp.x + 10} y={jmp.y + 10} fontSize={6} fill="rgba(251,191,36,0.5)" fontFamily={Fonts.mono}>
-                      ✦ {jmp.airtime}
-                    </SvgText>
-                  </G>
-                )
-              })
-            )}
-
-            {/* Start */}
-            <Circle cx={241} cy={8} r={9} fill="#0f0d0a" stroke={accent} strokeWidth={2.2} />
-            <SvgText x={241} y={12.5} textAnchor="middle" fontSize={8} fill={accent} fontFamily={Fonts.mono} fontWeight="700">S</SvgText>
-
-            {/* Finish */}
-            <Rect x={9} y={404} width={20} height={16} rx={3} fill="#0f0d0a" stroke="rgba(255,255,255,0.3)" strokeWidth={1.5} />
-            {[[0,0],[1,1],[0,2],[2,0],[2,2],[1,3]].map(([ci, ri], i) => (
-              <Rect key={i} x={9 + ci * 5} y={404 + ri * 4} width={5} height={4} fill="rgba(255,255,255,0.5)" />
-            ))}
-
-            {/* My best time */}
-            <Rect x={6} y={6} width={94} height={30} rx={7} fill="rgba(0,0,0,0.6)" />
-            <SvgText x={12} y={16} fontSize={6.5} fill="rgba(255,255,255,0.3)" fontFamily={Fonts.mono} letterSpacing={1.5}>MEINE BEST</SvgText>
-            <SvgText x={12} y={29} fontSize={13} fill={accent} fontFamily={Fonts.mono} fontWeight="700">01:22.5</SvgText>
-
-            {/* Tap hint */}
-            {!sel && (
-              <SvgText x={125} y={422} textAnchor="middle" fontSize={8.5} fill="rgba(255,255,255,0.16)" fontFamily={Fonts.body}>
-                Part antippen für Zeiten &amp; GPS-Speed
-              </SvgText>
-            )}
-          </Svg>
+        {/* Map */}
+        <View style={{ flex: 1, margin: 10, marginTop: 0, borderRadius: 18, backgroundColor: '#f5f4f0', overflow: 'hidden' }}>
+          <Image
+            source={require('@/assets/trail.png')}
+            style={{ flex: 1, width: '100%' }}
+            resizeMode="contain"
+          />
 
           {/* Sector detail panel */}
           {sectorData && (
-            <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '47%' }}>
-              <SectorPanel sector={sectorData} onClose={() => setSel(null)} />
-            </View>
+            <Animated.View
+              style={{
+                position: 'absolute',
+                bottom: 0,
+                left: 0,
+                right: 0,
+                height: panelHeight.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: ['0%', '100%'],
+                }),
+              }}
+            >
+              <SectorPanel
+                sector={sectorData}
+                dragHandlers={panelPanResponder.panHandlers}
+                onClose={() => setSel(null)}
+              />
+            </Animated.View>
           )}
         </View>
       </View>
@@ -362,6 +311,7 @@ const p = StyleSheet.create({
     elevation: 20,
   },
   handle: { width: 36, height: 3, borderRadius: 99, backgroundColor: 'rgba(255,255,255,0.12)' },
+  dragHint: { fontFamily: Fonts.body, fontSize: 9, color: Colors.dim, marginTop: 5 },
   sectorHead: {
     flexDirection: 'row', alignItems: 'center', gap: 9,
     padding: 4, paddingHorizontal: 14, paddingBottom: 10,

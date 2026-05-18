@@ -36,6 +36,12 @@ yarn-error.*
 # Appwrite
 .env.local
 
+# MCP config (contains API keys)
+.mcp.json
+
+# Claude Code local settings (contains API keys)
+.claude/settings.local.json
+
 # typescript
 *.tsbuildinfo
 

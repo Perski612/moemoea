@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { ScrollView, View, Text, TouchableOpacity, StyleSheet, Dimensions } from 'react-native'
+import { useFocusEffect } from 'expo-router'
 import Svg, { Path, Defs, LinearGradient, Stop } from 'react-native-svg'
 import { AppHeader } from '@/components/ui/AppHeader'
 import { Colors, Fonts } from '@/constants/theme'
@@ -329,7 +330,7 @@ export default function DashboardScreen() {
 
   const userId = session?.userId
 
-  useEffect(() => {
+  const loadDashboard = useCallback(() => {
     if (!userId) return
 
     getSessionsWithRuns(userId).then((data) => {
@@ -361,7 +362,9 @@ export default function DashboardScreen() {
         time: fmtTime(r.totalTime), delta: r.delta, isMe: r.isMe,
       })))
     })
-  }, [userId])
+  }, [getPersonalBests, getSessionsWithRuns, getWeeklyRanking, getWeeklyStats, userId])
+
+  useFocusEffect(loadDashboard)
 
   const visibleSessions = showAllSessions ? daySessions : daySessions.slice(0, SESSIONS_PREVIEW)
   const hasMore = daySessions.length > SESSIONS_PREVIEW

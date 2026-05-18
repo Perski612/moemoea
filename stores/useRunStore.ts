@@ -74,6 +74,13 @@ export const useRunStore = create<RunState>(() => ({
   runs: [],
 
   createSession: async (userId, date) => {
+    const existing = await databases.listDocuments(DB_ID, SESSIONS_ID, [
+      Query.equal('userId', userId),
+      Query.equal('date', date),
+      Query.limit(1),
+    ])
+    if (existing.documents[0]) return existing.documents[0] as unknown as Session
+
     const doc = await databases.createDocument(
       DB_ID, SESSIONS_ID, ID.unique(),
       { userId, date, trailId: 'moe-moea' },

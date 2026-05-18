@@ -2,6 +2,7 @@ import 'react-native-url-polyfill/auto'
 import { useEffect } from 'react'
 import { Stack } from 'expo-router'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { ErrorBoundary } from '@/components/ErrorBoundary'
 import {
   useFonts,
   BebasNeue_400Regular,
@@ -43,8 +44,10 @@ export default function RootLayout() {
   if (!fontsLoaded && !fontError) return null
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <Stack screenOptions={{ headerShown: false }} />
-    </QueryClientProvider>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <Stack screenOptions={{ headerShown: false }} />
+      </QueryClientProvider>
+    </ErrorBoundary>
   )
 }

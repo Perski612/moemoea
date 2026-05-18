@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Avatar Parts Preview</title>
+  <style>
+    body {
+      margin: 0;
+      background: #111;
+      color: #eee;
+      font-family: system-ui, sans-serif;
+      padding: 24px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 18px;
+    }
+    .card {
+      background: #1b1b1b;
+      border: 1px solid #333;
+      border-radius: 10px;
+      padding: 14px;
+    }
+    .avatar {
+      width: 144px;
+      height: 240px;
+      position: relative;
+      background:
+        linear-gradient(45deg, #ddd 25%, transparent 25%),
+        linear-gradient(-45deg, #ddd 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #ddd 75%),
+        linear-gradient(-45deg, transparent 75%, #ddd 75%);
+      background-color: #eee;
+      background-size: 48px 48px;
+      background-position: 0 0, 0 24px, 24px -24px, -24px 0;
+      image-rendering: pixelated;
+    }
+    .avatar img {
+      position: absolute;
+      inset: 0;
+      width: 144px;
+      height: 240px;
+      image-rendering: pixelated;
+    }
+    h2 {
+      font-size: 14px;
+      margin: 0 0 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Avatar Parts Preview</h1>
+  <div class="grid" id="grid"></div>
+
+  <script>
+    const combos = [
+      ['messy_front', 'green_default', 'none'],
+      ['side_sweep', 'round', 'none'],
+      ['long_twin', 'green_default', 'none'],
+      ['receding', 'thin', 'none'],
+      ['topknot', 'side_look', 'none'],
+      ['straight_bangs', 'green_default', 'clear_rect'],
+      ['straight_bangs', 'sleepy', 'shades'],
+    ];
+
+    const grid = document.getElementById('grid');
+    for (const [hair, eyes, glasses] of combos) {
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.innerHTML = `
+        <h2>${hair} / ${eyes} / ${glasses}</h2>
+        <div class="avatar">
+          <img src="body/base_body.svg">
+          <img src="clothes/shirt_template.svg">
+          <img src="clothes/shorts_template.svg">
+          <img src="eyes/${eyes}.svg">
+          <img src="hair/${hair}.svg">
+          <img src="glasses/${glasses}.svg">
+        </div>
+      `;
+      grid.appendChild(card);
+    }
+  </script>
+</body>
+</html>

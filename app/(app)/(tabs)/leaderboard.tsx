@@ -1,14 +1,14 @@
 import { useEffect, useState } from 'react'
 import { ScrollView, View, Text, TouchableOpacity, StyleSheet } from 'react-native'
 import { AppHeader } from '@/components/ui/AppHeader'
-import { PixelAvatar } from '@/components/PixelAvatar'
+import { UserAvatar } from '@/components/UserAvatar'
 import { Colors, Fonts } from '@/constants/theme'
 import { useRunStore } from '@/stores/useRunStore'
 import type { Tier } from '@/types'
 
 const accent = Colors.accent
 
-type Entry = { rank: number; user: string; tier: string; value: string; unit: string; bike: string; team: string; isMe?: boolean }
+type Entry = { rank: number; userId: string; user: string; tier: string; value: string; unit: string; bike: string; team: string; isMe?: boolean }
 
 const MEDALS = ['#ffd700', '#c0c0c0', '#cd7f32']
 const PODIUM_H = [76, 56, 44]
@@ -29,6 +29,7 @@ export default function LeaderboardScreen() {
     getLeaderboard(storeMetric, section, 10).then((entries) => {
       setData(entries.map(e => ({
         rank:  e.rank,
+        userId: e.userId,
         user:  e.username,
         tier:  e.tier as Tier,
         value: e.value.toFixed(metric === 'speed' ? 0 : 2),
@@ -89,7 +90,7 @@ export default function LeaderboardScreen() {
               const isGold = pos === 0
               return (
                 <View key={pos} style={s.podiumCol}>
-                  <PixelAvatar tier={e.tier as any} px={isGold ? 4 : 3} accentColor={accent} />
+                  <UserAvatar userId={e.userId} size={isGold ? 50 : 42} />
                   <Text style={s.podiumName} numberOfLines={1}>{e.user}</Text>
                   <Text style={[s.podiumVal, { color: isGold ? accent : Colors.text, fontSize: isGold ? 15 : 12 }]}>
                     {e.value}<Text style={s.podiumUnit}> {e.unit}</Text>
@@ -108,7 +109,7 @@ export default function LeaderboardScreen() {
           {rest.map(e => (
             <View key={e.rank} style={[s.row, e.isMe && { backgroundColor: `${accent}0f`, borderColor: `${accent}33` }]}>
               <Text style={s.rowRank}>#{e.rank}</Text>
-              <PixelAvatar tier={e.tier as any} px={2} accentColor={e.isMe ? accent : undefined} />
+              <UserAvatar userId={e.userId} size={34} />
               <View style={{ flex: 1 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                   <Text style={[s.rowName, e.isMe && { fontFamily: Fonts.bodyBd }]}>{e.user}</Text>

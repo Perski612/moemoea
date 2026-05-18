@@ -1,14 +1,14 @@
 export const Colors = {
-  bg:        '#0c0a07',
-  bgDeep:    '#080604',
-  bgCard:    '#181411',
-  accent:    '#39ff14',
+  bg:        '#1a1714',
+  bgDeep:    '#0f0d0a',
+  bgCard:    '#252018',
+  accent:    '#99EA57',
   accentRed: '#cc1a1a',
   text:      '#e8e4dc',
-  muted:     '#5a5550',
-  dim:       '#3a3530',
-  border:    'rgba(255,255,255,0.08)',
-  borderBright: 'rgba(255,255,255,0.13)',
+  muted:     '#9a9490',   // war #5a5550 — jetzt deutlich heller
+  dim:       '#6a6460',   // war #3a3530 — jetzt sichtbar
+  border:    'rgba(255,255,255,0.09)',
+  borderBright: 'rgba(255,255,255,0.16)',
 } as const
 
 export const Fonts = {
