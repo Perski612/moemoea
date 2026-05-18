@@ -1,5 +1,5 @@
-process.env.EXPO_PUBLIC_APPWRITE_ENDPOINT = 'https://fra.cloud.appwrite.io/v1'
-process.env.EXPO_PUBLIC_APPWRITE_PROJECT_ID = '6a032a7a002bf847e2cb'
+process.env.EXPO_PUBLIC_APPWRITE_ENDPOINT = 'https://test.appwrite.io/v1'
+process.env.EXPO_PUBLIC_APPWRITE_PROJECT_ID = 'test-project-id'
 process.env.EXPO_PUBLIC_DB_ID = 'trails-db'
 process.env.EXPO_PUBLIC_PROFILES_ID = 'profiles'
 process.env.EXPO_PUBLIC_BIKE_CONFIGS_ID = 'bike_configs'
