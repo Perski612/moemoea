@@ -1,77 +1,85 @@
 import Svg, { Rect } from 'react-native-svg'
 import type { Tier } from '@/types'
 
-const PALETTES: Record<Tier, { H: string; V: string; S: string; E: string }> = {
-  rookie:  { H: '#39ff14', V: '#1a4a08', S: '#d4a574', E: '#111' },
-  veteran: { H: '#ffd700', V: '#7a5500', S: '#d4a574', E: '#111' },
-  legend:  { H: '#bf00ff', V: '#5a0080', S: '#d4a574', E: '#111' },
+const TIER_COLORS: Record<Tier, string> = {
+  rookie:  '#39cc14',
+  veteran: '#ffd700',
+  legend:  '#bf00ff',
 }
 
-function buildRows(bikeType: 'hardtail' | 'fully', suspType: 'air' | 'coil'): string[] {
-  const frameRow = bikeType === 'fully' ? '.BBBBXBBBB..' : '.BBBBBBBBB..'
-  const forkRow  = suspType  === 'coil' ? 'BKB......BKB' : 'BB.......BB.'
-  return [
-    '....HHHH....',
-    '...HHHHHH...',
-    '..HHHHHHHH..',
-    '..HVVVVVHH..',
-    '..HSSSSSHH..',
-    '..HSE.E.SH..',
-    '..HSSSSSHH..',
-    'BJJJJJJJJJJB',
-    'BJJJDDJJJJJB',
-    '..JJJJJJJJJ.',
-    '...JJJJJJJ..',
-    '....JJ.JJ...',
-    '...BBB.BBB..',
-    frameRow,
-    forkRow,
-    'WW.......WW.',
-    '.WWW...WWW..',
-  ]
-}
+// 12 columns × 19 rows, front-facing chibi
+// H=hair  S=skin  E=eye-white  I=iris  M=mouth
+// N=neck  J=jacket  T=collar  D=jacket-detail  L=pants  W=shoe
+const CHAR_ROWS = [
+  '....HHHH....',  // 0  hair crown
+  '...HHHHHH...',  // 1  hair
+  '..HHHHHHHH..',  // 2  hair wide
+  '.HHSSSSSSHH.',  // 3  forehead
+  '.HHEISSIEHH.',  // 4  eyes row 1
+  '.HHEISSIEHH.',  // 5  eyes row 2
+  '.HHSSSSSSHH.',  // 6  nose/cheeks
+  '.HHSSMMSSHH.',  // 7  mouth
+  '.HHHSSSSHHH.',  // 8  chin / jaw
+  '....NNNN....',  // 9  neck
+  '.JJJTTTTJJJ.',  // 10 jacket + collar
+  '.JJJTTJJJJJ.',  // 11 collar narrows
+  '.JJJJJJJJJJ.',  // 12 jacket body
+  '.JJDJJJJDJJ.',  // 13 jacket detail stripe
+  '.JJJJJJJJJJ.',  // 14 jacket lower
+  '..LLLLLLLL..',  // 15 pants
+  '..LLLLLLLL..',  // 16 pants
+  '..LLLLLLLL..',  // 17 pants lower
+  '..WWW..WWW..',  // 18 shoes
+]
 
 interface PixelAvatarProps {
   tier?: Tier
   px?: number
   accentColor?: string
-  bikeColor?: string
+  bikeColor?: string   // repurposed → hair color
   jerseyJ?: string
-  jerseyD?: string
+  jerseyD?: string     // → pants color
   bikeType?: 'hardtail' | 'fully'
   suspType?: 'air' | 'coil'
 }
 
 export function PixelAvatar({
-  tier      = 'rookie',
-  px        = 3,
+  tier     = 'rookie',
+  px       = 3,
   accentColor,
   bikeColor,
   jerseyJ,
   jerseyD,
-  bikeType  = 'hardtail',
-  suspType  = 'air',
+  bikeType = 'hardtail',
+  suspType = 'air',
 }: PixelAvatarProps) {
-  const base = PALETTES[tier] ?? PALETTES.rookie
+  const iris   = accentColor ?? TIER_COLORS[tier] ?? '#39cc14'
+  const hair   = bikeColor   ?? '#1a1210'
+  const jacket = jerseyJ     ?? '#2a2830'
+  // fully bikes get slightly darker pants; coil suspension gets darker shoes
+  const basePants = jerseyD ?? '#a8b8d0'
+  const pants  = bikeType === 'fully' ? darken(basePants, 0.1) : basePants
+  const shoes  = suspType === 'coil'  ? '#3a1e08' : '#4a2e10'
+
   const pal: Record<string, string> = {
-    H: accentColor ?? base.H,
-    V: base.V,
-    S: base.S,
-    E: base.E,
-    J: jerseyJ ?? '#e8e4dc',
-    D: jerseyD ?? '#9a9890',
-    B: bikeColor ?? '#1a1a1a',
-    W: '#0d0d0d',
-    X: '#888888',
-    K: '#666666',
+    H: hair,
+    S: '#d4a574',   // skin
+    E: '#f0ede8',   // eye white
+    I: iris,
+    M: '#7a3015',   // mouth
+    N: '#d4a574',   // neck = skin
+    J: jacket,
+    T: '#c8c0b0',   // collar
+    D: darken(jacket, 0.35),
+    L: pants,
+    W: shoes,       // shoe color varies by suspType
   }
 
-  const rows = buildRows(bikeType, suspType)
-  const cols = rows[0].length
-  const width  = cols * px
-  const height = rows.length * px
+  const cols   = CHAR_ROWS[0].length
+  const W      = cols * px
+  const H      = CHAR_ROWS.length * px
 
-  const rects = rows.flatMap((row, ri) =>
+  const rects = CHAR_ROWS.flatMap((row, ri) =>
     [...row].flatMap((ch, ci) =>
       ch === '.' ? [] : [
         <Rect
@@ -81,19 +89,22 @@ export function PixelAvatar({
           width={px}
           height={px}
           fill={pal[ch] ?? '#fff'}
-        />
+        />,
       ]
     )
   )
 
   return (
-    <Svg
-      width={width}
-      height={height}
-      viewBox={`0 0 ${width} ${height}`}
-      style={{ imageRendering: 'pixelated' } as any}
-    >
+    <Svg width={W} height={H} viewBox={`0 0 ${W} ${H}`}>
       {rects}
     </Svg>
   )
+}
+
+function darken(hex: string, amount: number): string {
+  const n = parseInt(hex.replace('#', ''), 16)
+  const r = Math.max(0, Math.floor(((n >> 16) & 0xff) * (1 - amount)))
+  const g = Math.max(0, Math.floor(((n >> 8)  & 0xff) * (1 - amount)))
+  const b = Math.max(0, Math.floor(( n        & 0xff) * (1 - amount)))
+  return `rgb(${r},${g},${b})`
 }
