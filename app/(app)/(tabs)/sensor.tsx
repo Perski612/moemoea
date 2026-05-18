@@ -7,6 +7,7 @@ import { useAuthStore } from '@/stores/useAuthStore'
 import { useProfileStore } from '@/stores/useProfileStore'
 import { useRunStore } from '@/stores/useRunStore'
 import { Colors, Fonts, Radius } from '@/constants/theme'
+import { useTheme } from '@/hooks/useTheme'
 
 type SensorVector = {
   x: number
@@ -122,6 +123,7 @@ function AxisRows({ title, value, unit }: { title: string; value: SensorVector; 
 }
 
 export default function SensorScreen() {
+  const { theme } = useTheme()
   const queryClient = useQueryClient()
   const session = useAuthStore((state) => state.session)
   const profile = useProfileStore((state) => state.profile)
@@ -374,7 +376,7 @@ export default function SensorScreen() {
   }
 
   return (
-    <View style={styles.screen}>
+    <View style={[styles.screen, { backgroundColor: theme.bg }]}>
       <AppHeader />
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.hero}>

@@ -2,11 +2,10 @@ import { useEffect, useState } from 'react'
 import { ScrollView, View, Text, TouchableOpacity, StyleSheet } from 'react-native'
 import { AppHeader } from '@/components/ui/AppHeader'
 import { UserAvatar } from '@/components/UserAvatar'
-import { Colors, Fonts } from '@/constants/theme'
+import { Fonts } from '@/constants/theme'
 import { useRunStore } from '@/stores/useRunStore'
+import { useTheme } from '@/hooks/useTheme'
 import type { Tier } from '@/types'
-
-const accent = Colors.accent
 
 type Entry = { rank: number; userId: string; user: string; tier: string; value: string; unit: string; bike: string; team: string; isMe?: boolean }
 
@@ -19,6 +18,7 @@ const METRIC_LABELS: Record<string, string>  = { airtime: 'AIRTIME', gforce: 'G-
 
 export default function LeaderboardScreen() {
   const { getLeaderboard } = useRunStore()
+  const { theme, accent } = useTheme()
   const [section, setSection] = useState<'gesamt' | 'p1' | 'p2'>('gesamt')
   const [metric,  setMetric]  = useState<'airtime' | 'gforce' | 'speed' | 'style'>('airtime')
   const [data, setData]       = useState<Entry[]>([])
@@ -28,14 +28,9 @@ export default function LeaderboardScreen() {
     const UNITS: Record<string, string> = { airtime: 's', gforce: 'g', speed: 'km/h', style: 'pts' }
     getLeaderboard(storeMetric, section, 10).then((entries) => {
       setData(entries.map(e => ({
-        rank:  e.rank,
-        userId: e.userId,
-        user:  e.username,
-        tier:  e.tier as Tier,
-        value: e.value.toFixed(metric === 'speed' ? 0 : 2),
-        unit:  UNITS[metric] ?? '',
-        bike:  '',
-        team:  '',
+        rank: e.rank, userId: e.userId, user: e.username, tier: e.tier as Tier,
+        value: e.value.toFixed(metric === 'speed' ? 0 : 2), unit: UNITS[metric] ?? '',
+        bike: '', team: '',
       })))
     })
   }, [section, metric])
@@ -44,39 +39,42 @@ export default function LeaderboardScreen() {
   const rest  = data.slice(3)
 
   return (
-    <View style={{ flex: 1, backgroundColor: Colors.bg }}>
+    <View style={{ flex: 1, backgroundColor: theme.bg }}>
       <AppHeader />
       <ScrollView contentContainerStyle={{ paddingBottom: 110 }} showsVerticalScrollIndicator={false}>
 
-        {/* Page header */}
+        {/* Header */}
         <View style={s.header}>
-          <Text style={s.eyebrow}>Rangliste</Text>
-          <Text style={s.title}>MOE MOEA Trails</Text>
-          <Text style={s.sub}>Neckartal · Mai 2026</Text>
+          <Text style={[s.eyebrow, { color: accent }]}>Rangliste</Text>
+          <Text style={[s.title, { color: theme.text }]}>MOE MOEA Trails</Text>
+          <Text style={[s.sub, { color: theme.muted }]}>Neckartal · Mai 2026</Text>
         </View>
 
-        {/* Section tabs: Gesamt / Part 1 / Part 2 */}
-        <View style={s.sectionRow}>
+        {/* Section tabs */}
+        <View style={[s.sectionRow, { backgroundColor: theme.cardBg, borderColor: theme.cardBorder }]}>
           {Object.entries(SECTION_LABELS).map(([id, lbl]) => (
             <TouchableOpacity
               key={id}
               style={[s.sectionBtn, section === id && { backgroundColor: accent }]}
               onPress={() => setSection(id as 'gesamt' | 'p1' | 'p2')}
             >
-              <Text style={[s.sectionText, { color: section === id ? '#000' : Colors.muted }]}>{lbl}</Text>
+              <Text style={[s.sectionText, { color: section === id ? '#000' : theme.muted }]}>{lbl}</Text>
             </TouchableOpacity>
           ))}
         </View>
 
-        {/* Metric tabs: Airtime / G-Kraft / Speed / Style */}
+        {/* Metric tabs */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.tabs}>
           {Object.entries(METRIC_LABELS).map(([id, lbl]) => (
             <TouchableOpacity
               key={id}
-              style={[s.tabBtn, metric === id && { backgroundColor: `${accent}22`, borderColor: `${accent}55` }]}
+              style={[s.tabBtn, {
+                borderColor: metric === id ? `${accent}55` : theme.cardBorder,
+                backgroundColor: metric === id ? `${accent}22` : 'transparent',
+              }]}
               onPress={() => setMetric(id as 'airtime' | 'gforce' | 'speed' | 'style')}
             >
-              <Text style={[s.tabText, { color: metric === id ? accent : Colors.muted }]}>{lbl}</Text>
+              <Text style={[s.tabText, { color: metric === id ? accent : theme.muted }]}>{lbl}</Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
@@ -91,9 +89,9 @@ export default function LeaderboardScreen() {
               return (
                 <View key={pos} style={s.podiumCol}>
                   <UserAvatar userId={e.userId} size={isGold ? 50 : 42} />
-                  <Text style={s.podiumName} numberOfLines={1}>{e.user}</Text>
-                  <Text style={[s.podiumVal, { color: isGold ? accent : Colors.text, fontSize: isGold ? 15 : 12 }]}>
-                    {e.value}<Text style={s.podiumUnit}> {e.unit}</Text>
+                  <Text style={[s.podiumName, { color: theme.text }]} numberOfLines={1}>{e.user}</Text>
+                  <Text style={[s.podiumVal, { color: isGold ? accent : theme.text, fontSize: isGold ? 15 : 12 }]}>
+                    {e.value}<Text style={[s.podiumUnit, { color: theme.muted }]}> {e.unit}</Text>
                   </Text>
                   <View style={[s.podiumBlock, { height: PODIUM_H[idx], backgroundColor: `${MEDALS[pos]}1a`, borderColor: `${MEDALS[pos]}55` }]}>
                     <Text style={[s.podiumRank, { color: MEDALS[pos] }]}>{pos + 1}</Text>
@@ -104,21 +102,24 @@ export default function LeaderboardScreen() {
           </View>
         )}
 
-        {/* Rest of list */}
+        {/* Rest */}
         <View style={{ paddingHorizontal: 16 }}>
           {rest.map(e => (
-            <View key={e.rank} style={[s.row, e.isMe && { backgroundColor: `${accent}0f`, borderColor: `${accent}33` }]}>
-              <Text style={s.rowRank}>#{e.rank}</Text>
+            <View key={e.rank} style={[s.row, {
+              backgroundColor: e.isMe ? `${accent}0f` : theme.cardBg,
+              borderColor: e.isMe ? `${accent}33` : theme.cardBorder,
+            }]}>
+              <Text style={[s.rowRank, { color: theme.dim }]}>#{e.rank}</Text>
               <UserAvatar userId={e.userId} size={34} />
               <View style={{ flex: 1 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <Text style={[s.rowName, e.isMe && { fontFamily: Fonts.bodyBd }]}>{e.user}</Text>
+                  <Text style={[s.rowName, { color: theme.text }, e.isMe && { fontFamily: Fonts.bodyBd }]}>{e.user}</Text>
                   {e.isMe && <Text style={[s.iTag, { color: accent }]}>ICH</Text>}
                 </View>
-                <Text style={s.rowBike}>{e.bike}</Text>
+                <Text style={[s.rowBike, { color: theme.muted }]}>{e.bike}</Text>
               </View>
-              <Text style={[s.rowVal, { color: e.isMe ? accent : Colors.text }]}>
-                {e.value}<Text style={s.rowUnit}> {e.unit}</Text>
+              <Text style={[s.rowVal, { color: e.isMe ? accent : theme.text }]}>
+                {e.value}<Text style={[s.rowUnit, { color: theme.muted }]}> {e.unit}</Text>
               </Text>
             </View>
           ))}
@@ -129,55 +130,45 @@ export default function LeaderboardScreen() {
   )
 }
 
-const CARD_BD = 'rgba(255,255,255,0.10)'
-
 const s = StyleSheet.create({
   header: { padding: 16, paddingBottom: 10 },
-  eyebrow: { fontFamily: Fonts.bodyBd, fontSize: 12, letterSpacing: 2, color: accent, textTransform: 'uppercase', marginBottom: 4 },
-  title: { fontFamily: Fonts.bodyBd, fontSize: 22, color: Colors.text },
-  sub: { fontFamily: Fonts.body, fontSize: 13, color: Colors.muted, marginTop: 2 },
+  eyebrow: { fontFamily: Fonts.bodyBd, fontSize: 12, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 4 },
+  title: { fontFamily: Fonts.bodyBd, fontSize: 22 },
+  sub: { fontFamily: Fonts.body, fontSize: 13, marginTop: 2 },
 
-  // Section toggle (Gesamt / Part 1 / Part 2)
   sectionRow: {
     flexDirection: 'row', marginHorizontal: 16, marginBottom: 10,
-    backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 12,
-    borderWidth: 1, borderColor: CARD_BD, padding: 3, gap: 3,
+    borderRadius: 12, borderWidth: 1, padding: 3, gap: 3,
   },
-  sectionBtn: {
-    flex: 1, alignItems: 'center', paddingVertical: 8, borderRadius: 9,
-  },
+  sectionBtn: { flex: 1, alignItems: 'center', paddingVertical: 8, borderRadius: 9 },
   sectionText: { fontFamily: Fonts.bodyBd, fontSize: 13, letterSpacing: 0.5 },
 
-  // Metric tabs
   tabs: { flexDirection: 'row', gap: 6, paddingHorizontal: 16, paddingBottom: 14 },
-  tabBtn: {
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)', borderRadius: 20,
-    paddingHorizontal: 14, paddingVertical: 6,
-  },
+  tabBtn: { borderWidth: 1, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 6 },
   tabText: { fontFamily: Fonts.bodyBd, fontSize: 12, letterSpacing: 1 },
 
   podium: { flexDirection: 'row', justifyContent: 'center', alignItems: 'flex-end', gap: 8, paddingHorizontal: 20, paddingBottom: 22 },
   podiumCol: { flex: 1, alignItems: 'center', gap: 5 },
-  podiumName: { fontFamily: Fonts.bodyBd, fontSize: 11, color: Colors.text, textAlign: 'center' },
+  podiumName: { fontFamily: Fonts.bodyBd, fontSize: 11, textAlign: 'center' },
   podiumVal: { fontFamily: Fonts.mono, fontWeight: '700' },
-  podiumUnit: { fontFamily: Fonts.mono, fontSize: 11, color: Colors.muted },
+  podiumUnit: { fontFamily: Fonts.mono, fontSize: 11 },
   podiumBlock: {
     width: '100%', borderWidth: 1, borderRadius: 6,
     alignItems: 'center', justifyContent: 'center',
-    borderTopLeftRadius: 6, borderTopRightRadius: 6, borderBottomLeftRadius: 0, borderBottomRightRadius: 0,
+    borderTopLeftRadius: 6, borderTopRightRadius: 6,
+    borderBottomLeftRadius: 0, borderBottomRightRadius: 0,
   },
   podiumRank: { fontFamily: Fonts.mono, fontSize: 20, fontWeight: '700' },
 
   row: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
     padding: 9, paddingHorizontal: 12, marginBottom: 6,
-    borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.04)',
-    borderWidth: 1, borderColor: CARD_BD,
+    borderRadius: 12, borderWidth: 1,
   },
-  rowRank: { fontFamily: Fonts.mono, fontSize: 14, color: Colors.dim, width: 20, textAlign: 'center', fontWeight: '700' },
-  rowName: { fontFamily: Fonts.body, fontSize: 14, color: Colors.text },
+  rowRank: { fontFamily: Fonts.mono, fontSize: 14, width: 20, textAlign: 'center', fontWeight: '700' },
+  rowName: { fontFamily: Fonts.body, fontSize: 14 },
   iTag: { fontFamily: Fonts.bodyBd, fontSize: 10, letterSpacing: 1.5 },
-  rowBike: { fontFamily: Fonts.body, fontSize: 12, color: Colors.muted },
+  rowBike: { fontFamily: Fonts.body, fontSize: 12 },
   rowVal: { fontFamily: Fonts.mono, fontSize: 16, fontWeight: '700' },
-  rowUnit: { fontFamily: Fonts.mono, fontSize: 11, color: Colors.muted },
+  rowUnit: { fontFamily: Fonts.mono, fontSize: 11 },
 })

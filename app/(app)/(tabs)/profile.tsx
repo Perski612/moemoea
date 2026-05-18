@@ -1,4 +1,5 @@
-import { Image, ImageSourcePropType, ScrollView, View, Text, TouchableOpacity, StyleSheet } from 'react-native'
+import { useMemo } from 'react'
+import { Image, ImageSourcePropType, ScrollView, View, Text, TouchableOpacity, StyleSheet, useColorScheme } from 'react-native'
 import { router } from 'expo-router'
 import { useQuery } from '@tanstack/react-query'
 import { AppHeader } from '@/components/ui/AppHeader'
@@ -8,11 +9,10 @@ import { Label } from '@/components/ui/Label'
 import { DEFAULT_AVATAR_URL } from '@/constants/avatarPresets'
 import { useAuthStore } from '@/stores/useAuthStore'
 import { useProfileStore } from '@/stores/useProfileStore'
+import { useSettingsStore, ACCENT_OPTIONS } from '@/stores/useSettingsStore'
 import { databases, DB_ID, RUNS_ID, CLIP_POSTS_ID, Query } from '@/lib/appwrite'
 import { Colors, Fonts, Spacing, Radius } from '@/constants/theme'
 import type { BikeConfig, Run, ClipPost } from '@/types'
-
-const accent = Colors.accent
 
 const BIKE_IMAGES: Record<'hardtail' | 'enduro' | 'downhill', ImageSourcePropType> = {
   hardtail: require('@/assets/Hardtail.png'),
@@ -29,7 +29,7 @@ const DEFAULT_BIKE: Omit<BikeConfig, '$id' | 'userId'> = {
   jerseyD: '#9a9890',
   hairColor: '#1a1210',
   skinColor: '#d4a574',
-  eyeColor: accent,
+  eyeColor: Colors.accent,
   shirtColor: '#e8e4dc',
   pantsColor: '#9a9890',
   hairStyle: 'short',
@@ -38,13 +38,36 @@ const DEFAULT_BIKE: Omit<BikeConfig, '$id' | 'userId'> = {
 }
 
 const ACHIEVEMENTS = [
-  { id: 'first_air',   label: 'Erster Flug',  color: accent },
+  { id: 'first_air',   label: 'Erster Flug',  color: Colors.accent },
   { id: 'five_runs',   label: '5 Runs',        color: '#ffd700' },
   { id: 'top3',        label: 'Podium',        color: '#bf00ff' },
   { id: 'trail_care',  label: 'Trail-Pfleger', color: '#00e5ff' },
   { id: 'goldhelmet',  label: 'Goldhelm',      color: '#ffd700' },
   { id: 'contest_win', label: 'Contest-Star',  color: '#ff6b00' },
 ]
+
+const DARK_THEME = {
+  bg:      '#1a1714',
+  bgCard:  '#252018',
+  text:    '#e8e4dc',
+  muted:   '#9a9490',
+  dim:     '#6a6460',
+  border:  'rgba(255,255,255,0.09)',
+  cardBg:  'rgba(255,255,255,0.025)',
+  cardBorder: 'rgba(255,255,255,0.07)',
+}
+
+const LIGHT_THEME = {
+  bg:          '#dfd8cc',
+  bgCard:      '#d4ccbf',
+  text:        '#1a1714',
+  muted:       '#5a5550',
+  dim:         '#7a7470',
+  border:      'rgba(0,0,0,0.12)',
+  cardBg:      'rgba(0,0,0,0.04)',
+  cardBorder:  'rgba(0,0,0,0.1)',
+  accentOverride: '#4a6e10',
+}
 
 async function fetchProfileStats(userId: string) {
   const [runsRes, clipsRes] = await Promise.all([
@@ -60,13 +83,12 @@ async function fetchProfileStats(userId: string) {
 
   const runs = runsRes.documents as unknown as Run[]
   const clips = clipsRes.documents as unknown as ClipPost[]
-  const bestRank = 0
 
   return {
     distanceKm: runs.reduce((sum, run) => sum + run.distance, 0),
     runCount: runs.length,
     fires: clips.reduce((sum, clip) => sum + clip.fireCount, 0),
-    bestRank,
+    bestRank: 0,
     hasAirtime: runs.some((run) => run.maxAirtime > 0),
   }
 }
@@ -74,6 +96,12 @@ async function fetchProfileStats(userId: string) {
 export default function ProfileScreen() {
   const { logout, isAdmin, session } = useAuthStore()
   const { profile, bikeConfig, saveBikeConfig } = useProfileStore()
+  const { accentColor, units, colorScheme: schemeSetting, setAccentColor, setUnits, setColorScheme } = useSettingsStore()
+  const systemScheme = useColorScheme()
+
+  const isDark = schemeSetting === 'system' ? systemScheme !== 'light' : schemeSetting === 'dark'
+  const theme = isDark ? DARK_THEME : LIGHT_THEME
+  const accent = isDark ? accentColor : (LIGHT_THEME.accentOverride)
 
   const { data: stats = { distanceKm: 0, runCount: 0, fires: 0, bestRank: 0, hasAirtime: false } } = useQuery({
     queryKey: ['profile-stats', session?.userId],
@@ -85,7 +113,6 @@ export default function ProfileScreen() {
   const xp = profile?.xp ?? 0
   const level = profile?.level ?? 1
   const xpMax = Math.ceil(Math.max(xp + 1, 400) / 400) * 400
-  const tier = profile?.tier ?? 'rookie'
   const achievementState = {
     first_air: stats.hasAirtime,
     five_runs: stats.runCount >= 5,
@@ -94,10 +121,6 @@ export default function ProfileScreen() {
     goldhelmet: stats.runCount >= 20,
     contest_win: false,
   } as Record<string, boolean>
-
-  const handleSave = async (config: Omit<BikeConfig, '$id' | 'userId'>) => {
-    await saveBikeConfig(config)
-  }
 
   const resolvedBikeType = ((): 'hardtail' | 'enduro' | 'downhill' => {
     const t = bikeConfig?.bikeType as string | undefined
@@ -129,121 +152,202 @@ export default function ProfileScreen() {
     }
     : DEFAULT_BIKE
 
-  const cardStyle = { backgroundColor: 'rgba(255,255,255,0.025)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.07)', borderRadius: 16, padding: 14 }
+  const distDisplay = units === 'km'
+    ? `${stats.distanceKm.toFixed(1)} km`
+    : `${(stats.distanceKm * 0.621371).toFixed(1)} mi`
+
+  const card = useMemo(() => ({
+    backgroundColor: theme.cardBg,
+    borderWidth: 1,
+    borderColor: theme.cardBorder,
+    borderRadius: 16,
+    padding: 14,
+  }), [theme])
 
   return (
-    <View style={{ flex: 1, backgroundColor: Colors.bg }}>
+    <View style={{ flex: 1, backgroundColor: theme.bg }}>
       <AppHeader />
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 120 }} showsVerticalScrollIndicator={false}>
 
         {/* Identity */}
         <View style={s.identity}>
-          <View style={s.avatarWrapper}>
+          <View style={[s.avatarWrapper, { backgroundColor: theme.bgCard, borderColor: `${accent}55` }]}>
             <RemoteAvatar url={bikeConfig?.avatarUrl} size={50} />
           </View>
           <View style={{ flex: 1 }}>
             <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 7 }}>
-              <Text style={s.username}>{profile?.username ?? 'Unbekannt'}</Text>
-              <Text style={s.bikeTypeInline}>{resolvedBikeType.toUpperCase()}</Text>
+              <Text style={[s.username, { color: theme.text }]}>{profile?.username ?? 'Unbekannt'}</Text>
+              <Text style={[s.bikeTypeInline, { color: accent }]}>{resolvedBikeType.toUpperCase()}</Text>
             </View>
-            <Text style={s.team}>{profile?.team ?? 'Kein Team'}</Text>
-            <View style={s.levelBadge}>
-              <Text style={s.levelText}>LVL {level}</Text>
+            <Text style={[s.team, { color: theme.muted }]}>{profile?.team ?? 'Kein Team'}</Text>
+            <View style={[s.levelBadge, { borderColor: `${accent}44`, backgroundColor: `${accent}1a` }]}>
+              <Text style={[s.levelText, { color: accent }]}>LVL {level}</Text>
             </View>
-          </View>
-          <View style={s.bikeImageWrapper}>
-            <Image
-              source={BIKE_IMAGES[resolvedBikeType]}
-              style={s.bikeImage}
-              resizeMode="contain"
-            />
           </View>
         </View>
 
-        {/* TP Bar */}
+        {/* XP Bar */}
         <View style={{ marginBottom: Spacing.md }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 5 }}>
-            <Text style={s.tpLabel}>Track Points</Text>
+            <Text style={[s.tpLabel, { color: theme.muted }]}>Track Points</Text>
             <Text style={[s.tpLabel, { color: accent }]}>{xp.toLocaleString('de-DE')} / {xpMax.toLocaleString('de-DE')} TP</Text>
           </View>
-          <View style={s.tpTrack}>
-            <View style={[s.tpFill, { width: `${Math.min((xp / xpMax) * 100, 100)}%` as any }]} />
+          <View style={[s.tpTrack, { backgroundColor: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)' }]}>
+            <View style={[s.tpFill, { width: `${Math.min((xp / xpMax) * 100, 100)}%` as any, backgroundColor: accent }]} />
           </View>
         </View>
 
         {/* Stats */}
         <View style={s.statsRow}>
           {[
-            [`${stats.distanceKm.toFixed(1)} km`, 'Distanz'],
+            [distDisplay, 'Distanz'],
             [String(stats.runCount), 'Runs'],
             [String(stats.fires), 'Fires'],
             [stats.bestRank > 0 ? `#${stats.bestRank}` : '-', 'Rang'],
           ].map(([v, l]) => (
             <View key={l} style={{ alignItems: 'center' }}>
-              <Text style={s.statVal}>{v}</Text>
-              <Text style={s.statLbl}>{l}</Text>
+              <Text style={[s.statVal, { color: theme.text }]}>{v}</Text>
+              <Text style={[s.statLbl, { color: theme.muted }]}>{l}</Text>
             </View>
           ))}
         </View>
 
-        {/* Bike Setup Preview */}
-        <Label>Mein Bike-Setup</Label>
-        <View style={[cardStyle, { marginBottom: 16, flexDirection: 'row', alignItems: 'center', gap: 12 }]}>
-          <View style={{ backgroundColor: Colors.bg, borderRadius: 9, padding: 8, borderWidth: 1, borderColor: `${accent}22` }}>
-            <RemoteAvatar url={bikeConfig?.avatarUrl} size={80} />
+        {/* Bike-Setup Preview */}
+        <Label color={accent}>Mein Bike-Setup</Label>
+        <View style={[card, { marginBottom: 16, flexDirection: 'row', alignItems: 'center', gap: 10 }]}>
+          <View style={{ backgroundColor: theme.bg, borderRadius: 8, padding: 5, borderWidth: 1, borderColor: `${accent}22` }}>
+            <RemoteAvatar url={bikeConfig?.avatarUrl} size={52} />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={{ fontFamily: Fonts.bodyBd, fontSize: 15, color: Colors.text }}>
+            <Text style={{ fontFamily: Fonts.bodyBd, fontSize: 15, color: theme.text }}>
               {bikeConfig?.marke || '—'} {bikeConfig?.modell || ''}
             </Text>
-            <Text style={{ fontFamily: Fonts.body, fontSize: 12, color: Colors.muted, marginTop: 3 }}>
+            <Text style={{ fontFamily: Fonts.body, fontSize: 12, color: theme.muted, marginTop: 3 }}>
               {resolvedBikeType.charAt(0).toUpperCase() + resolvedBikeType.slice(1)} · {bikeConfig?.material === 'carbon' ? 'Carbon' : 'Aluminium'}
             </Text>
             {(bikeConfig?.federweg_v || bikeConfig?.federweg_h) ? (
-              <Text style={{ fontFamily: Fonts.body, fontSize: 12, color: Colors.muted, marginTop: 1 }}>
+              <Text style={{ fontFamily: Fonts.body, fontSize: 12, color: theme.muted, marginTop: 1 }}>
                 ↕ {bikeConfig.federweg_v || '—'}mm / {bikeConfig.federweg_h || '—'}mm
               </Text>
             ) : null}
           </View>
-          <Image source={BIKE_IMAGES[resolvedBikeType]} style={{ width: 70, height: 46 }} resizeMode="contain" />
+          <Image source={BIKE_IMAGES[resolvedBikeType]} style={{ width: 150, height: 100 }} resizeMode="contain" />
         </View>
 
-        {/* Setup Konfigurator */}
-        <Label>Fahrer & Bike Konfigurator</Label>
-        <View style={[cardStyle, { marginBottom: 16 }]}>
-          <BikeConfigurator
-            initial={bikeInitial}
-            accent={accent}
-            onSave={handleSave}
-          />
+        {/* Konfiguration */}
+        <Label color={accent}>Konfiguration</Label>
+        <View style={{ marginBottom: 16 }}>
+          <BikeConfigurator initial={bikeInitial} accent={accent} onSave={saveBikeConfig} />
+        </View>
+
+        {/* Settings */}
+        <Label color={accent}>Settings</Label>
+        <View style={[card, { marginBottom: 16, gap: 18, backgroundColor: Colors.bgCard, borderColor: Colors.border }]}>
+
+          {/* Farbschema */}
+          <View>
+            <Text style={[s.settingLabel, { color: theme.muted }]}>Farbschema</Text>
+            <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
+              {([
+                { value: 'system', label: 'System' },
+                { value: 'dark',   label: 'Dunkel' },
+                { value: 'light',  label: 'Hell' },
+              ] as const).map(({ value, label }) => (
+                <TouchableOpacity
+                  key={value}
+                  onPress={() => setColorScheme(value)}
+                  style={{
+                    paddingHorizontal: 14, paddingVertical: 6, borderRadius: Radius.sm,
+                    borderWidth: 1,
+                    borderColor: schemeSetting === value ? accent : theme.border,
+                    backgroundColor: schemeSetting === value ? `${accent}1a` : 'transparent',
+                  }}
+                >
+                  <Text style={{ fontFamily: Fonts.mono, fontSize: 12, color: schemeSetting === value ? accent : theme.muted }}>
+                    {label.toUpperCase()}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          {/* Akzentfarbe */}
+          <View>
+            <Text style={[s.settingLabel, { color: theme.muted }]}>Akzentfarbe</Text>
+            <View style={{ flexDirection: 'row', gap: 10, marginTop: 8 }}>
+              {ACCENT_OPTIONS.map(color => (
+                <TouchableOpacity
+                  key={color}
+                  onPress={() => setAccentColor(color)}
+                  style={{
+                    width: 30, height: 30, borderRadius: 15,
+                    backgroundColor: color,
+                    borderWidth: 2.5,
+                    borderColor: color === accent ? theme.text : 'transparent',
+                  }}
+                />
+              ))}
+            </View>
+          </View>
+
+          {/* Einheiten */}
+          <View>
+            <Text style={[s.settingLabel, { color: theme.muted }]}>Einheiten</Text>
+            <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
+              {(['km', 'mi'] as const).map(u => (
+                <TouchableOpacity
+                  key={u}
+                  onPress={() => setUnits(u)}
+                  style={{
+                    paddingHorizontal: 20, paddingVertical: 6, borderRadius: Radius.sm,
+                    borderWidth: 1,
+                    borderColor: units === u ? accent : theme.border,
+                    backgroundColor: units === u ? `${accent}1a` : 'transparent',
+                  }}
+                >
+                  <Text style={{ fontFamily: Fonts.mono, fontSize: 13, color: units === u ? accent : theme.muted }}>
+                    {u.toUpperCase()}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
         </View>
 
         {/* Achievements */}
-        <Label>Achievements</Label>
+        <Label color={accent}>Achievements</Label>
         <View style={s.achieveGrid}>
           {ACHIEVEMENTS.map(a => (
             <View key={a.id} style={[
               s.achieveCard,
-              { borderColor: achievementState[a.id] ? `${a.color}44` : 'rgba(255,255,255,0.06)', backgroundColor: achievementState[a.id] ? `${a.color}09` : 'rgba(255,255,255,0.01)', opacity: achievementState[a.id] ? 1 : 0.38 }
+              {
+                borderColor: achievementState[a.id] ? `${a.color}44` : theme.border,
+                backgroundColor: achievementState[a.id] ? `${a.color}09` : theme.cardBg,
+                opacity: achievementState[a.id] ? 1 : 0.4,
+              },
             ]}>
-              <View style={[s.achieveDot, { backgroundColor: achievementState[a.id] ? `${a.color}1a` : 'rgba(255,255,255,0.04)', borderColor: achievementState[a.id] ? `${a.color}44` : 'rgba(255,255,255,0.1)' }]}>
-                <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: achievementState[a.id] ? a.color : '#333' }} />
+              <View style={[s.achieveDot, {
+                backgroundColor: achievementState[a.id] ? `${a.color}1a` : 'transparent',
+                borderColor: achievementState[a.id] ? `${a.color}44` : theme.border,
+              }]}>
+                <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: achievementState[a.id] ? a.color : theme.muted }} />
               </View>
-              <Text style={[s.achieveLabel, { color: achievementState[a.id] ? Colors.text : Colors.muted }]}>{a.label}</Text>
+              <Text style={[s.achieveLabel, { color: achievementState[a.id] ? theme.text : theme.muted }]}>{a.label}</Text>
             </View>
           ))}
         </View>
 
-        {/* Admin Button */}
+        {/* Admin */}
         {isAdmin && (
-          <TouchableOpacity style={s.adminBtn} onPress={() => router.push('/(app)/admin')}>
-            <Text style={s.adminBtnText}>Admin-Panel öffnen</Text>
+          <TouchableOpacity style={[s.adminBtn, { borderColor: theme.border }]} onPress={() => router.push('/(app)/admin')}>
+            <Text style={[s.adminBtnText, { color: theme.muted }]}>Admin-Panel öffnen</Text>
           </TouchableOpacity>
         )}
 
         {/* Logout */}
         <TouchableOpacity style={s.logoutBtn} onPress={logout}>
-          <Text style={s.logoutText}>Ausloggen</Text>
+          <Text style={[s.logoutText, { color: theme.muted }]}>Ausloggen</Text>
         </TouchableOpacity>
 
       </ScrollView>
@@ -253,58 +357,40 @@ export default function ProfileScreen() {
 
 const s = StyleSheet.create({
   identity: { flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: Spacing.md },
-  bikeImageWrapper: {
-    width: 150, height: 100,
-    alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1, borderColor: `${accent}33`, borderRadius: 12,
-    backgroundColor: `${accent}0a`, overflow: 'hidden',
-  },
-  bikeImage: { width: 220, height: 145, marginTop: 30 },
-  bikeTypeInline: { fontFamily: Fonts.mono, fontSize: 11, color: accent, letterSpacing: 1.5 },
   avatarWrapper: {
-    width: 62, height: 62, borderRadius: 14, backgroundColor: Colors.bgCard,
-    borderWidth: 2, borderColor: `${accent}55`,
-    alignItems: 'center', justifyContent: 'center',
+    width: 62, height: 62, borderRadius: 14,
+    borderWidth: 2, alignItems: 'center', justifyContent: 'center',
   },
-  username: { fontFamily: Fonts.bodyBd, fontSize: 22, color: Colors.text },
-  team: { fontFamily: Fonts.body, fontSize: 13, color: Colors.muted, marginTop: 2 },
+  username: { fontFamily: Fonts.bodyBd, fontSize: 22 },
+  team: { fontFamily: Fonts.body, fontSize: 13, marginTop: 2 },
+  bikeTypeInline: { fontFamily: Fonts.mono, fontSize: 11, letterSpacing: 1.5 },
   levelBadge: {
     alignSelf: 'flex-start', marginTop: 6,
-    borderWidth: 1, borderColor: `${accent}44`, backgroundColor: `${accent}1a`,
-    borderRadius: Radius.full, paddingHorizontal: 10, paddingVertical: 2,
+    borderWidth: 1, borderRadius: Radius.full,
+    paddingHorizontal: 10, paddingVertical: 2,
   },
-  levelText: { fontFamily: Fonts.mono, fontSize: 12, color: accent },
+  levelText: { fontFamily: Fonts.mono, fontSize: 12 },
 
-  tpLabel: { fontFamily: Fonts.bodyBd, fontSize: 11, letterSpacing: 1.5, color: Colors.muted, textTransform: 'uppercase' },
-  tpTrack: { height: 5, backgroundColor: 'rgba(255,255,255,0.07)', borderRadius: 99 },
-  tpFill: { height: '100%', backgroundColor: accent, borderRadius: 99 },
+  tpLabel: { fontFamily: Fonts.bodyBd, fontSize: 11, letterSpacing: 1.5, textTransform: 'uppercase' },
+  tpTrack: { height: 5, borderRadius: 99 },
+  tpFill: { height: '100%', borderRadius: 99 },
 
   statsRow: { flexDirection: 'row', justifyContent: 'space-around', marginBottom: Spacing.lg },
-  statVal: { fontFamily: Fonts.mono, fontSize: 17, color: Colors.text, fontWeight: '700' },
-  statLbl: { fontFamily: Fonts.bodyBd, fontSize: 10, letterSpacing: 1.5, color: Colors.muted, textTransform: 'uppercase' },
+  statVal: { fontFamily: Fonts.mono, fontSize: 17, fontWeight: '700' },
+  statLbl: { fontFamily: Fonts.bodyBd, fontSize: 10, letterSpacing: 1.5, textTransform: 'uppercase' },
 
-  fieldLabel: { fontFamily: Fonts.bodyBd, fontSize: 10, letterSpacing: 1.5, color: Colors.muted, textTransform: 'uppercase', marginBottom: 5 },
-  input: {
-    backgroundColor: 'rgba(255,255,255,0.04)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 7, padding: 7, paddingHorizontal: 10, color: Colors.text,
-    fontFamily: Fonts.body, fontSize: 13,
-  },
+  settingLabel: { fontFamily: Fonts.bodyBd, fontSize: 11, letterSpacing: 1.5, textTransform: 'uppercase' },
 
   achieveGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 24 },
-  achieveCard: {
-    width: '30%', borderWidth: 1, borderRadius: 12, padding: 10, alignItems: 'center',
-  },
+  achieveCard: { width: '30%', borderWidth: 1, borderRadius: 12, padding: 10, alignItems: 'center' },
   achieveDot: {
     width: 24, height: 24, borderRadius: 6, marginBottom: 6, borderWidth: 1,
     alignItems: 'center', justifyContent: 'center',
   },
   achieveLabel: { fontFamily: Fonts.bodyBd, fontSize: 11, textAlign: 'center', lineHeight: 15 },
 
-  adminBtn: {
-    borderWidth: 1, borderColor: Colors.border, borderRadius: Radius.md,
-    padding: Spacing.md, alignItems: 'center', marginBottom: Spacing.md,
-  },
-  adminBtnText: { fontFamily: Fonts.bodyBd, fontSize: 15, color: Colors.muted },
+  adminBtn: { borderWidth: 1, borderRadius: Radius.md, padding: Spacing.md, alignItems: 'center', marginBottom: Spacing.md },
+  adminBtnText: { fontFamily: Fonts.bodyBd, fontSize: 15 },
   logoutBtn: { alignSelf: 'center', padding: Spacing.sm, marginBottom: Spacing.md },
-  logoutText: { fontFamily: Fonts.body, fontSize: 15, color: Colors.muted },
+  logoutText: { fontFamily: Fonts.body, fontSize: 15 },
 })

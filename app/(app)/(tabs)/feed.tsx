@@ -6,8 +6,7 @@ import { UserAvatar } from '@/components/UserAvatar'
 import { Colors, Fonts, Radius } from '@/constants/theme'
 import { useFeedStore } from '@/stores/useFeedStore'
 import { useAuthStore } from '@/stores/useAuthStore'
-
-const accent = Colors.accent
+import { useTheme } from '@/hooks/useTheme'
 
 // ── HELPERS ──────────────────────────────────────────────────────────────────
 
@@ -32,6 +31,7 @@ function VideoPlaceholder() {
 // ── UPLOAD MODAL ─────────────────────────────────────────────────────────────
 
 function UploadModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+  const { accent } = useTheme()
   const [step, setStep] = useState(0)
   const [uploading, setUploading] = useState(false)
   const [done, setDone] = useState(false)
@@ -154,6 +154,7 @@ function UploadModal({ visible, onClose }: { visible: boolean; onClose: () => vo
 export default function FeedScreen() {
   const { posts, getClipPosts, toggleFire } = useFeedStore()
   const { session } = useAuthStore()
+  const { theme, accent } = useTheme()
   const [uploadOpen, setUploadOpen] = useState(false)
 
   const contestMonth = new Date().toISOString().slice(0, 7)
@@ -167,7 +168,7 @@ export default function FeedScreen() {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: Colors.bg }}>
+    <View style={{ flex: 1, backgroundColor: theme.bg }}>
       <AppHeader />
       <UploadModal visible={uploadOpen} onClose={() => setUploadOpen(false)} />
       <ScrollView contentContainerStyle={{ paddingBottom: 110 }} showsVerticalScrollIndicator={false}>
@@ -176,8 +177,8 @@ export default function FeedScreen() {
         <View style={s.contestHeader}>
           <View>
             <Text style={s.eyebrow}>Style Contest</Text>
-            <Text style={s.contestTitle}>{new Date().toLocaleDateString('de', { month: 'long', year: 'numeric' })}</Text>
-            <Text style={s.contestSub}>MOE MOEA Trails · {posts.filter(p => p.verified).length} validierte Clips</Text>
+            <Text style={[s.contestTitle, { color: theme.text }]}>{new Date().toLocaleDateString('de', { month: 'long', year: 'numeric' })}</Text>
+            <Text style={[s.contestSub, { color: theme.muted }]}>MOE MOEA Trails · {posts.filter(p => p.verified).length} validierte Clips</Text>
           </View>
           <View style={s.liveBadge}>
             <Text style={s.liveBadgeText}>LIVE</Text>
@@ -248,19 +249,19 @@ export default function FeedScreen() {
 
 const s = StyleSheet.create({
   contestHeader: { padding: 16, paddingBottom: 14, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  eyebrow: { fontFamily: Fonts.bodyBd, fontSize: 11, letterSpacing: 2, color: accent, textTransform: 'uppercase', marginBottom: 4 },
+  eyebrow: { fontFamily: Fonts.bodyBd, fontSize: 11, letterSpacing: 2, color: Colors.accent, textTransform: 'uppercase', marginBottom: 4 },
   contestTitle: { fontFamily: Fonts.bodyBd, fontSize: 22, color: Colors.text },
   contestSub: { fontFamily: Fonts.body, fontSize: 13, color: Colors.muted, marginTop: 2 },
-  liveBadge: { backgroundColor: `${accent}18`, borderWidth: 1, borderColor: `${accent}55`, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 },
-  liveBadgeText: { fontFamily: Fonts.mono, fontSize: 11, color: accent },
+  liveBadge: { backgroundColor: `${Colors.accent}18`, borderWidth: 1, borderColor: `${Colors.accent}55`, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 },
+  liveBadgeText: { fontFamily: Fonts.mono, fontSize: 11, color: Colors.accent },
 
   uploadBtn: {
-    marginHorizontal: 16, marginBottom: 16, borderWidth: 1, borderColor: accent,
+    marginHorizontal: 16, marginBottom: 16, borderWidth: 1, borderColor: Colors.accent,
     borderRadius: 14, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12,
   },
   uploadIcon: {
-    width: 40, height: 40, borderRadius: 10, backgroundColor: `${accent}1a`,
-    borderWidth: 1, borderColor: `${accent}44`, alignItems: 'center', justifyContent: 'center',
+    width: 40, height: 40, borderRadius: 10, backgroundColor: `${Colors.accent}1a`,
+    borderWidth: 1, borderColor: `${Colors.accent}44`, alignItems: 'center', justifyContent: 'center',
   },
   uploadTitle: { fontFamily: Fonts.bodyBd, fontSize: 16, color: Colors.text, marginBottom: 2 },
   uploadSub: { fontFamily: Fonts.body, fontSize: 12, color: Colors.muted },

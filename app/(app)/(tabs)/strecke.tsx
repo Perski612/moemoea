@@ -4,10 +4,9 @@ import { useFocusEffect } from 'expo-router'
 import { AppHeader } from '@/components/ui/AppHeader'
 import { Colors, Fonts } from '@/constants/theme'
 import { useRunStore } from '@/stores/useRunStore'
+import { useTheme } from '@/hooks/useTheme'
 
 type Rider = { name: string; time: string; delta: string; tier: string; fastest: boolean; isMe?: boolean }
-
-const accent = Colors.accent
 const PANEL_COMPACT = 0.47
 const PANEL_EXPANDED = 0.88
 
@@ -79,6 +78,7 @@ function SectorPanel({
   onClose: () => void
   dragHandlers: any
 }) {
+  const { accent } = useTheme()
   return (
     <View style={p.panel}>
       {/* Handle */}
@@ -158,6 +158,7 @@ function SectorPanel({
 export default function StreckeScreen() {
   const [sel, setSel] = useState<string | null>(null)
   const { getLeaderboard } = useRunStore()
+  const { theme, accent } = useTheme()
   const [p1Riders, setP1Riders] = useState<Rider[]>([])
   const [p2Riders, setP2Riders] = useState<Rider[]>([])
   const panelHeight = useRef(new Animated.Value(PANEL_COMPACT)).current
@@ -234,13 +235,13 @@ export default function StreckeScreen() {
   const totalDist = SECTORS.reduce((sum, s) => sum + parseInt(s.dist), 0)
 
   return (
-    <View style={{ flex: 1, backgroundColor: Colors.bg }}>
+    <View style={{ flex: 1, backgroundColor: theme.bg }}>
       <AppHeader />
       <View style={{ flex: 1, flexDirection: 'column' }}>
 
         {/* Trail header */}
         <View style={s.trailHeader}>
-          <Text style={s.eyebrow}>Streckenanalyse</Text>
+          <Text style={[s.eyebrow, { color: accent }]}>Streckenanalyse</Text>
           <View style={{ flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' }}>
             <View>
               <Text style={s.trailTitle}>MOE MOEA Trails</Text>
@@ -292,7 +293,7 @@ export default function StreckeScreen() {
 
 const s = StyleSheet.create({
   trailHeader: { padding: 10, paddingHorizontal: 16, paddingBottom: 8 },
-  eyebrow: { fontFamily: Fonts.bodyBd, fontSize: 11, letterSpacing: 2.5, color: accent, textTransform: 'uppercase', marginBottom: 5, opacity: 0.9 },
+  eyebrow: { fontFamily: Fonts.bodyBd, fontSize: 11, letterSpacing: 2.5, color: Colors.accent, textTransform: 'uppercase', marginBottom: 5, opacity: 0.9 },
   trailTitle: { fontFamily: Fonts.bodyBd, fontSize: 20, color: Colors.text, lineHeight: 24 },
   trailSub: { fontFamily: Fonts.body, fontSize: 12, color: Colors.muted, marginTop: 2 },
   bestBox: {

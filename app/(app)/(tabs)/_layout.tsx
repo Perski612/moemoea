@@ -1,6 +1,7 @@
 import { Tabs } from 'expo-router'
-import { Colors, Fonts } from '@/constants/theme'
+import { Fonts } from '@/constants/theme'
 import Svg, { Circle, Rect, Path, Polygon } from 'react-native-svg'
+import { useTheme } from '@/hooks/useTheme'
 
 function DashIcon({ color }: { color: string }) {
   return (
@@ -65,7 +66,7 @@ function ProfileIcon({ color }: { color: string }) {
 }
 
 export default function TabLayout() {
-  const accent = Colors.accent
+  const { theme, accent } = useTheme()
 
   return (
     <Tabs
@@ -73,14 +74,14 @@ export default function TabLayout() {
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: 'rgba(18,15,10,0.97)',
-          borderTopColor: 'rgba(255,255,255,0.09)',
+          backgroundColor: theme.tabBar,
+          borderTopColor: theme.tabBorder,
           height: 96,
           paddingBottom: 30,
           paddingTop: 6,
         },
         tabBarActiveTintColor: accent,
-        tabBarInactiveTintColor: '#6a6460',
+        tabBarInactiveTintColor: theme.dim,
         tabBarLabelStyle: {
           fontFamily: Fonts.bodyBd,
           fontSize: 10,

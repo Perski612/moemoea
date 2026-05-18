@@ -3,18 +3,15 @@ import { ScrollView, View, Text, TouchableOpacity, StyleSheet, Dimensions } from
 import { useFocusEffect } from 'expo-router'
 import Svg, { Path, Defs, LinearGradient, Stop } from 'react-native-svg'
 import { AppHeader } from '@/components/ui/AppHeader'
-import { Colors, Fonts } from '@/constants/theme'
+import { Fonts } from '@/constants/theme'
 import { useAuthStore } from '@/stores/useAuthStore'
 import { useRunStore } from '@/stores/useRunStore'
 import { useProfileStore } from '@/stores/useProfileStore'
+import { useTheme, Theme } from '@/hooks/useTheme'
 import type { Tier } from '@/types'
 
 const { width: SCREEN_W } = Dimensions.get('window')
 const CARD_W = SCREEN_W - 32
-
-const accent = Colors.accent
-
-// ── TYPES ────────────────────────────────────────────────────────────────────
 
 type DaySession = {
   label: string; date: string; runs: number
@@ -39,8 +36,6 @@ function fmtTime(secs: number | null): string {
   return `${m}:${s}`
 }
 
-// ── HELPERS ──────────────────────────────────────────────────────────────────
-
 const SESSIONS_PREVIEW = 4
 
 function TierDot({ tier }: { tier: string }) {
@@ -48,12 +43,17 @@ function TierDot({ tier }: { tier: string }) {
   return <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: c }} />
 }
 
-function StatCard({ label, value, unit, glowing }: { label: string; value: string; unit: string; glowing?: boolean }) {
+function StatCard({ label, value, unit, glowing, accent, theme }: {
+  label: string; value: string; unit: string; glowing?: boolean; accent: string; theme: Theme
+}) {
   return (
-    <View style={[s.statCard, glowing && { borderColor: `${accent}44`, backgroundColor: `${accent}08` }]}>
-      <Text style={s.statLabel}>{label}</Text>
-      <Text style={[s.statValue, glowing && { color: accent }]}>{value}</Text>
-      <Text style={s.statUnit}>{unit}</Text>
+    <View style={[s.statCard, {
+      backgroundColor: theme.cardBg,
+      borderColor: glowing ? `${accent}44` : theme.cardBorder,
+    }, glowing && { backgroundColor: `${accent}08` }]}>
+      <Text style={[s.statLabel, { color: theme.muted }]}>{label}</Text>
+      <Text style={[s.statValue, { color: glowing ? accent : theme.text }]}>{value}</Text>
+      <Text style={[s.statUnit, { color: theme.muted }]}>{unit}</Text>
     </View>
   )
 }
@@ -88,9 +88,9 @@ function MiniChart({ data, color, h = 56 }: { data: number[]; color: string; h?:
   )
 }
 
-// ── WEEKLY GOALS ─────────────────────────────────────────────────────────────
-
-function WeeklyGoals({ stats }: { stats: { distance: number; airtime: number; topSpeed: number } }) {
+function WeeklyGoals({ stats, accent, theme }: {
+  stats: { distance: number; airtime: number; topSpeed: number }; accent: string; theme: Theme
+}) {
   const goals = [
     { label: 'Distanz',   cur: +(stats.distance / 1000).toFixed(1), goal: 50,  suffix: 'km',   color: accent },
     { label: 'Airtime',   cur: +stats.airtime.toFixed(1),            goal: 30,  suffix: 's',    color: '#a78bfa' },
@@ -102,13 +102,16 @@ function WeeklyGoals({ stats }: { stats: { distance: number; airtime: number; to
         const pct = Math.min(cur / goal, 1)
         const done = pct >= 1
         return (
-          <View key={label} style={[s.goalCard, done && { borderColor: `${color}33`, backgroundColor: `${color}09` }]}>
-            <Text style={[s.goalLabel, { color: done ? color : Colors.muted }]}>{label}</Text>
-            <Text style={[s.goalValue, { color: done ? color : Colors.text }]}>{cur}</Text>
-            <Text style={[s.goalSub, { color: done ? `${color}bb` : Colors.muted }]}>
-              {suffix} · <Text style={{ color: Colors.dim }}>/{goal}</Text>
+          <View key={label} style={[s.goalCard, {
+            backgroundColor: done ? `${color}09` : theme.cardBg,
+            borderColor: done ? `${color}33` : theme.cardBorder,
+          }]}>
+            <Text style={[s.goalLabel, { color: done ? color : theme.muted }]}>{label}</Text>
+            <Text style={[s.goalValue, { color: done ? color : theme.text }]}>{cur}</Text>
+            <Text style={[s.goalSub, { color: done ? `${color}bb` : theme.muted }]}>
+              {suffix} · <Text style={{ color: theme.dim }}>/{goal}</Text>
             </Text>
-            <View style={s.goalBarTrack}>
+            <View style={[s.goalBarTrack, { backgroundColor: theme.cardBorder }]}>
               <View style={[s.goalBarFill, {
                 width: `${pct * 100}%` as any,
                 backgroundColor: color,
@@ -126,52 +129,53 @@ function WeeklyGoals({ stats }: { stats: { distance: number; airtime: number; to
   )
 }
 
-// ── CAROUSEL SLIDES ───────────────────────────────────────────────────────────
-
 function SlideBests({
-  eyebrow, title, sub, time, airtime, speed, gforce, rank, rankOf,
+  eyebrow, title, sub, time, airtime, speed, gforce, rank, rankOf, accent, theme,
 }: {
   eyebrow: string; title: string; sub: string
   time: string; airtime: string; speed: string; gforce: string; rank: string; rankOf: number
+  accent: string; theme: Theme
 }) {
   return (
     <View style={s.slide}>
-      <Text style={s.slideEyebrow}>{eyebrow}</Text>
-      <Text style={s.slideTitle}>{title}</Text>
-      <Text style={s.slideSub}>{sub}</Text>
-      {/* Highlight: best time */}
-      <View style={s.bestTimeBox}>
+      <Text style={[s.slideEyebrow, { color: accent }]}>{eyebrow}</Text>
+      <Text style={[s.slideTitle, { color: theme.text }]}>{title}</Text>
+      <Text style={[s.slideSub, { color: theme.muted }]}>{sub}</Text>
+      <View style={[s.bestTimeBox, { borderColor: `${accent}30`, backgroundColor: `${accent}08` }]}>
         <View>
-          <Text style={s.bestTimeLabel}>BESTE GESAMTZEIT</Text>
-          <Text style={s.bestTimeValue}>{time}<Text style={s.bestTimeUnit}> min</Text></Text>
+          <Text style={[s.bestTimeLabel, { color: theme.muted }]}>BESTE GESAMTZEIT</Text>
+          <Text style={[s.bestTimeValue, { color: accent }]}>{time}<Text style={[s.bestTimeUnit, { color: theme.muted }]}> min</Text></Text>
         </View>
-        <View style={s.rankBadge}>
-          <Text style={s.rankBadgeNum}>{rank}</Text>
-          <Text style={s.rankBadgeSub}>von {rankOf}</Text>
+        <View style={[s.rankBadge, { backgroundColor: `${accent}18` }]}>
+          <Text style={[s.rankBadgeNum, { color: accent }]}>{rank}</Text>
+          <Text style={[s.rankBadgeSub, { color: theme.muted }]}>von {rankOf}</Text>
         </View>
       </View>
       <View style={s.statsRow3}>
-        <StatCard label="AIRTIME" value={airtime} unit="s" glowing />
-        <StatCard label="TOP-SPEED" value={speed} unit="km/h" />
-        <StatCard label="G-KRAFT" value={gforce} unit="g" />
+        <StatCard label="AIRTIME" value={airtime} unit="s" glowing accent={accent} theme={theme} />
+        <StatCard label="TOP-SPEED" value={speed} unit="km/h" accent={accent} theme={theme} />
+        <StatCard label="G-KRAFT" value={gforce} unit="g" accent={accent} theme={theme} />
       </View>
     </View>
   )
 }
 
-function SlideWeeklyRanking({ ranking }: { ranking: WeeklyRankRow[] }) {
+function SlideWeeklyRanking({ ranking, accent, theme }: { ranking: WeeklyRankRow[]; accent: string; theme: Theme }) {
   return (
     <View style={s.slide}>
-      <Text style={s.slideEyebrow}>WOCHENRANKING — GESAMTZEIT</Text>
+      <Text style={[s.slideEyebrow, { color: accent }]}>WOCHENRANKING — GESAMTZEIT</Text>
       {ranking.map((r) => (
-        <View key={r.rank} style={[s.rankRow, r.isMe && { backgroundColor: `${accent}0d`, borderColor: `${accent}28` }]}>
-          <Text style={s.rankNum}>#{r.rank}</Text>
+        <View key={r.rank} style={[s.rankRow, {
+          backgroundColor: r.isMe ? `${accent}0d` : theme.cardBg,
+          borderColor: r.isMe ? `${accent}28` : theme.cardBorder,
+        }]}>
+          <Text style={[s.rankNum, { color: theme.dim }]}>#{r.rank}</Text>
           <TierDot tier={r.tier} />
-          <Text style={[s.rankName, r.isMe && { fontFamily: Fonts.bodyBd }]} numberOfLines={1}>
+          <Text style={[s.rankName, { color: theme.text }, r.isMe && { fontFamily: Fonts.bodyBd }]} numberOfLines={1}>
             {r.name}{r.isMe ? ' ' : ''}
             {r.isMe && <Text style={{ color: accent, fontSize: 9 }}>ICH</Text>}
           </Text>
-          <Text style={[s.rankTime, r.rank === 1 && { color: '#9333ea' }]}>{r.time}</Text>
+          <Text style={[s.rankTime, { color: r.rank === 1 ? '#9333ea' : theme.text }]}>{r.time}</Text>
           <Text style={[s.rankDelta, { color: r.delta === '—' ? '#9333ea' : '#dc2626' }]}>{r.delta}</Text>
         </View>
       ))}
@@ -181,9 +185,9 @@ function SlideWeeklyRanking({ ranking }: { ranking: WeeklyRankRow[] }) {
 
 const SLIDES = ['Meine Bests', 'Part 1', 'Part 2', 'Wochenranking']
 
-// ── CAROUSEL ─────────────────────────────────────────────────────────────────
-
-function Carousel({ bests, weeklyRanking }: { bests: PersonalBests; weeklyRanking: WeeklyRankRow[] }) {
+function Carousel({ bests, weeklyRanking, accent, theme }: {
+  bests: PersonalBests; weeklyRanking: WeeklyRankRow[]; accent: string; theme: Theme
+}) {
   const [currentSlide, setCurrentSlide] = useState(0)
   const scrollRef = useRef<ScrollView>(null)
   const userInteracted = useRef(false)
@@ -216,52 +220,36 @@ function Carousel({ bests, weeklyRanking }: { bests: PersonalBests; weeklyRankin
 
   const b = bests
   const slides = [
-    <SlideBests key="bests"
-      eyebrow="★ MEINE BESTLEISTUNGEN"
-      title="MOE MOEA Trails — Gesamt"
+    <SlideBests key="bests" eyebrow="★ MEINE BESTLEISTUNGEN" title="MOE MOEA Trails — Gesamt"
       sub="Neckartal · Beste je gemessene Werte"
-      time={b.gesamt.time} airtime={b.gesamt.airtime}
-      speed={b.gesamt.speed} gforce={b.gesamt.gforce}
-      rank={b.gesamt.rank} rankOf={b.gesamt.rankOf}
-    />,
-    <SlideBests key="p1"
-      eyebrow="P1 — OBERER TRAIL · 680m · ↓62m"
-      title="Part 1 Bestzeiten"
+      time={b.gesamt.time} airtime={b.gesamt.airtime} speed={b.gesamt.speed} gforce={b.gesamt.gforce}
+      rank={b.gesamt.rank} rankOf={b.gesamt.rankOf} accent={accent} theme={theme} />,
+    <SlideBests key="p1" eyebrow="P1 — OBERER TRAIL · 680m · ↓62m" title="Part 1 Bestzeiten"
       sub="Bester Run insgesamt"
-      time={b.p1.time} airtime={b.p1.airtime}
-      speed={b.p1.speed} gforce={b.p1.gforce}
-      rank={b.p1.rank} rankOf={b.p1.rankOf}
-    />,
-    <SlideBests key="p2"
-      eyebrow="P2 — UNTERER TRAIL · 520m · Loop"
-      title="Part 2 Bestzeiten"
+      time={b.p1.time} airtime={b.p1.airtime} speed={b.p1.speed} gforce={b.p1.gforce}
+      rank={b.p1.rank} rankOf={b.p1.rankOf} accent={accent} theme={theme} />,
+    <SlideBests key="p2" eyebrow="P2 — UNTERER TRAIL · 520m · Loop" title="Part 2 Bestzeiten"
       sub="Bester Run insgesamt"
-      time={b.p2.time} airtime={b.p2.airtime}
-      speed={b.p2.speed} gforce={b.p2.gforce}
-      rank={b.p2.rank} rankOf={b.p2.rankOf}
-    />,
-    <SlideWeeklyRanking key="ranking" ranking={weeklyRanking} />,
+      time={b.p2.time} airtime={b.p2.airtime} speed={b.p2.speed} gforce={b.p2.gforce}
+      rank={b.p2.rank} rankOf={b.p2.rankOf} accent={accent} theme={theme} />,
+    <SlideWeeklyRanking key="ranking" ranking={weeklyRanking} accent={accent} theme={theme} />,
   ]
 
   return (
-    <View style={s.carouselCard}>
+    <View style={[s.carouselCard, { backgroundColor: theme.cardBg, borderColor: theme.cardBorder }]}>
       <ScrollView
         ref={scrollRef}
-        horizontal
-        pagingEnabled
-        showsHorizontalScrollIndicator={false}
+        horizontal pagingEnabled showsHorizontalScrollIndicator={false}
         onMomentumScrollEnd={handleScrollEnd}
         scrollEventThrottle={16}
         style={{ width: CARD_W }}
       >
         {slides.map((slideEl, i) => (
-          <View key={i} style={{ width: CARD_W }}>
-            {slideEl}
-          </View>
+          <View key={i} style={{ width: CARD_W }}>{slideEl}</View>
         ))}
       </ScrollView>
       <View style={s.dotsRow}>
-        <Text style={s.dotsLabel}>{SLIDES[currentSlide]}</Text>
+        <Text style={[s.dotsLabel, { color: theme.dim }]}>{SLIDES[currentSlide]}</Text>
         <View style={{ flexDirection: 'row', gap: 5 }}>
           {SLIDES.map((_, i) => (
             <TouchableOpacity key={i} onPress={() => goTo(i)}>
@@ -274,32 +262,33 @@ function Carousel({ bests, weeklyRanking }: { bests: PersonalBests; weeklyRankin
   )
 }
 
-// ── DAY SESSION ROW ───────────────────────────────────────────────────────────
-
-function DayRow({ day, expanded, onToggle }: {
-  day: DaySession; expanded: boolean; onToggle: () => void
+function DayRow({ day, expanded, onToggle, accent, theme }: {
+  day: DaySession; expanded: boolean; onToggle: () => void; accent: string; theme: Theme
 }) {
   return (
     <View style={{ marginBottom: 8 }}>
       <TouchableOpacity
         onPress={onToggle}
-        style={[s.dayRow, expanded && { borderBottomLeftRadius: 0, borderBottomRightRadius: 0, borderBottomWidth: 0 }]}
+        style={[s.dayRow, {
+          backgroundColor: theme.cardBg,
+          borderColor: theme.cardBorder,
+        }, expanded && { borderBottomLeftRadius: 0, borderBottomRightRadius: 0, borderBottomWidth: 0 }]}
       >
         <View style={{ flex: 1 }}>
-          <Text style={s.dayLabel}>{day.label}</Text>
-          <Text style={s.dayRuns}>{day.runs} Runs</Text>
+          <Text style={[s.dayLabel, { color: theme.text }]}>{day.label}</Text>
+          <Text style={[s.dayRuns, { color: theme.dim }]}>{day.runs} Runs</Text>
         </View>
         <View style={{ alignItems: 'flex-end' }}>
           <Text style={[s.dayTime, { color: accent }]}>{day.bestRun}</Text>
-          <Text style={s.dayAir}>✦ {day.bestAirtime}</Text>
+          <Text style={[s.dayAir, { color: theme.muted }]}>✦ {day.bestAirtime}</Text>
         </View>
-        <Text style={[s.dayChevron, expanded && { transform: [{ rotate: '180deg' }] }]}>▾</Text>
+        <Text style={[s.dayChevron, { color: theme.dim }, expanded && { transform: [{ rotate: '180deg' }] }]}>▾</Text>
       </TouchableOpacity>
       {expanded && (
-        <View style={s.dayExpanded}>
-          <Text style={s.chartLabel}>Airtime pro Run (s)</Text>
+        <View style={[s.dayExpanded, { backgroundColor: theme.cardBg, borderColor: theme.cardBorder }]}>
+          <Text style={[s.chartLabel, { color: theme.dim }]}>Airtime pro Run (s)</Text>
           <MiniChart data={day.airtimeData} color={accent} />
-          <Text style={[s.chartLabel, { marginTop: 12 }]}>Rundenzeiten (s) — niedriger = besser</Text>
+          <Text style={[s.chartLabel, { color: theme.dim, marginTop: 12 }]}>Rundenzeiten (s) — niedriger = besser</Text>
           <MiniChart data={day.runTimeData} color="#60a5fa" />
         </View>
       )}
@@ -307,12 +296,11 @@ function DayRow({ day, expanded, onToggle }: {
   )
 }
 
-// ── SCREEN ───────────────────────────────────────────────────────────────────
-
 export default function DashboardScreen() {
   const { session } = useAuthStore()
   const profile = useProfileStore(s => s.profile)
   const { getSessionsWithRuns, getPersonalBests, getWeeklyStats, getWeeklyRanking } = useRunStore()
+  const { theme, accent } = useTheme()
 
   const [daySessions, setDaySessions] = useState<DaySession[]>([])
   const [weeklyRanking, setWeeklyRanking] = useState<WeeklyRankRow[]>([])
@@ -324,10 +312,8 @@ export default function DashboardScreen() {
   const [weeklyGoals, setWeeklyGoals] = useState({ distance: 0, airtime: 0, topSpeed: 0 })
   const [tp, setTp] = useState(0)
   const tpMax = 4000
-
   const [expandedDay, setExpandedDay] = useState<number | null>(null)
   const [showAllSessions, setShowAllSessions] = useState(false)
-
   const userId = session?.userId
 
   const loadDashboard = useCallback(() => {
@@ -348,8 +334,8 @@ export default function DashboardScreen() {
     getPersonalBests(userId).then((pb) => {
       setBests({
         gesamt: { time: fmtTime(pb.totalTime), airtime: pb.maxAirtime?.toFixed(1) ?? '—', speed: pb.maxSpeed?.toFixed(0) ?? '—', gforce: pb.maxGForce?.toFixed(1) ?? '—', rank: '#—', rankOf: 0 },
-        p1:     { time: fmtTime(pb.p1Time),    airtime: '—', speed: '—', gforce: '—', rank: '#—', rankOf: 0 },
-        p2:     { time: fmtTime(pb.p2Time),    airtime: '—', speed: '—', gforce: '—', rank: '#—', rankOf: 0 },
+        p1:     { time: fmtTime(pb.p1Time), airtime: '—', speed: '—', gforce: '—', rank: '#—', rankOf: 0 },
+        p2:     { time: fmtTime(pb.p2Time), airtime: '—', speed: '—', gforce: '—', rank: '#—', rankOf: 0 },
       })
       setTp(Math.round((pb.maxAirtime ?? 0) * 100 + (pb.maxSpeed ?? 0) * 10))
     })
@@ -372,59 +358,60 @@ export default function DashboardScreen() {
   const username = profile?.username ?? '—'
 
   return (
-    <View style={{ flex: 1, backgroundColor: Colors.bg }}>
+    <View style={{ flex: 1, backgroundColor: theme.bg }}>
       <AppHeader />
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{ padding: 16, paddingBottom: 110 }}
         showsVerticalScrollIndicator={false}
       >
-        {/* TP / Level bar */}
-        <View style={{ paddingVertical: 12 }}>
+        {/* Level / TP bar */}
+        <View style={{ paddingTop: 12, paddingBottom: 24 }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <View style={s.levelBadge}>
-                <Text style={s.levelText}>LVL {level}</Text>
+              <View style={[s.levelBadge, { backgroundColor: `${accent}1a`, borderColor: `${accent}44` }]}>
+                <Text style={[s.levelText, { color: accent }]}>LVL {level}</Text>
               </View>
-              <Text style={s.levelName}>{username}</Text>
+              <Text style={[s.levelName, { color: theme.text }]}>{username}</Text>
             </View>
-            <Text style={s.tpText}>
+            <Text style={[s.tpText, { color: theme.muted }]}>
               {tp.toLocaleString('de')}<Text style={{ color: accent }}>/{tpMax.toLocaleString('de')} TP</Text>
             </Text>
           </View>
-          <View style={s.tpTrack}>
-            <View style={[s.tpFill, { width: `${Math.min((tp / tpMax) * 100, 100)}%` as any }]} />
+          <View style={[s.tpTrack, { backgroundColor: theme.cardBorder }]}>
+            <View style={[s.tpFill, { width: `${Math.min((tp / tpMax) * 100, 100)}%` as any, backgroundColor: accent, shadowColor: accent }]} />
           </View>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 5 }}>
-            <Text style={s.tpHint}>{tpMax - tp} TP bis LVL {level + 1}</Text>
-            <Text style={s.tpHint}>Nächstes: Trail-Devil Badge</Text>
+            <Text style={[s.tpHint, { color: theme.dim }]}>{tpMax - tp} TP bis LVL {level + 1}</Text>
+            <Text style={[s.tpHint, { color: theme.dim }]}>Nächstes: Trail-Devil Badge</Text>
           </View>
         </View>
 
-        {/* Weekly Goals */}
-        <Text style={s.sectionLabel}>Wochenziele</Text>
-        <WeeklyGoals stats={weeklyGoals} />
+        {/* Wochenziele */}
+        <Text style={[s.sectionLabel, { color: accent }]}>Wochenziele</Text>
+        <WeeklyGoals stats={weeklyGoals} accent={accent} theme={theme} />
 
-        {/* Carousel */}
-        <Carousel bests={bests} weeklyRanking={weeklyRanking} />
+        {/* Bestleistungen Carousel */}
+        <Text style={[s.sectionLabel, { color: accent, marginTop: 24 }]}>Bestleistungen</Text>
+        <Carousel bests={bests} weeklyRanking={weeklyRanking} accent={accent} theme={theme} />
 
-        {/* Sessions */}
-        <Text style={[s.sectionLabel, { marginTop: 4 }]}>Letzte Sessions</Text>
+        {/* Letzte Sessions */}
+        <Text style={[s.sectionLabel, { color: accent, marginTop: 24 }]}>Letzte Sessions</Text>
         {visibleSessions.map((day, i) => (
           <DayRow
-            key={i}
-            day={day}
+            key={i} day={day}
             expanded={expandedDay === i}
             onToggle={() => setExpandedDay(expandedDay === i ? null : i)}
+            accent={accent} theme={theme}
           />
         ))}
 
         {hasMore && (
           <TouchableOpacity
             onPress={() => setShowAllSessions(v => !v)}
-            style={s.showMoreBtn}
+            style={[s.showMoreBtn, { backgroundColor: theme.cardBg, borderColor: theme.cardBorder }]}
           >
-            <Text style={s.showMoreText}>
+            <Text style={[s.showMoreText, { color: theme.muted }]}>
               {showAllSessions ? 'Weniger anzeigen ▲' : `Alle ${daySessions.length} Sessions anzeigen ▼`}
             </Text>
           </TouchableOpacity>
@@ -434,131 +421,86 @@ export default function DashboardScreen() {
   )
 }
 
-// ── STYLES ───────────────────────────────────────────────────────────────────
-
-const CARD_BG = 'rgba(255,255,255,0.05)'
-const CARD_BD = 'rgba(255,255,255,0.11)'
-
 const s = StyleSheet.create({
   sectionLabel: {
     fontFamily: Fonts.bodyBd, fontSize: 12, letterSpacing: 2.5,
-    color: accent, textTransform: 'uppercase', opacity: 0.9, marginBottom: 10,
+    textTransform: 'uppercase', opacity: 0.9, marginBottom: 10,
   },
+  levelBadge: { borderWidth: 1, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 4 },
+  levelText: { fontFamily: Fonts.mono, fontSize: 13, fontWeight: '700' },
+  levelName: { fontFamily: Fonts.bodyBd, fontSize: 16 },
+  tpText: { fontFamily: Fonts.mono, fontSize: 12 },
+  tpTrack: { height: 7, borderRadius: 99, overflow: 'hidden' },
+  tpFill: { height: '100%', borderRadius: 99, shadowRadius: 6, shadowOpacity: 0.4 },
+  tpHint: { fontFamily: Fonts.body, fontSize: 11 },
 
-  // TP bar
-  levelBadge: {
-    backgroundColor: `${accent}1a`, borderWidth: 1, borderColor: `${accent}44`,
-    borderRadius: 8, paddingHorizontal: 12, paddingVertical: 4,
-  },
-  levelText: { fontFamily: Fonts.mono, fontSize: 13, fontWeight: '700', color: accent },
-  levelName: { fontFamily: Fonts.bodyBd, fontSize: 16, color: Colors.text },
-  tpText: { fontFamily: Fonts.mono, fontSize: 12, color: Colors.muted },
-  tpTrack: { height: 7, backgroundColor: 'rgba(255,255,255,0.07)', borderRadius: 99, overflow: 'hidden' },
-  tpFill: {
-    height: '100%', backgroundColor: accent, borderRadius: 99,
-    shadowColor: accent, shadowRadius: 6, shadowOpacity: 0.4,
-  },
-  tpHint: { fontFamily: Fonts.body, fontSize: 11, color: Colors.dim },
-
-  // Weekly goals
-  goalsRow: { flexDirection: 'row', gap: 8, marginBottom: 18 },
+  goalsRow: { flexDirection: 'row', gap: 8, marginBottom: 0 },
   goalCard: {
-    flex: 1, backgroundColor: CARD_BG,
-    borderWidth: 1, borderColor: CARD_BD, borderRadius: 12,
+    flex: 1, borderWidth: 1, borderRadius: 12,
     paddingTop: 12, paddingHorizontal: 11, overflow: 'hidden',
   },
   goalLabel: { fontFamily: Fonts.bodyBd, fontSize: 11, letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 5 },
-  goalValue: { fontFamily: Fonts.mono, fontSize: 22, fontWeight: '700', color: Colors.text, lineHeight: 24 },
+  goalValue: { fontFamily: Fonts.mono, fontSize: 22, fontWeight: '700', lineHeight: 24 },
   goalSub: { fontFamily: Fonts.body, fontSize: 11, marginBottom: 8 },
-  goalBarTrack: { marginHorizontal: 2, height: 7, backgroundColor: 'rgba(255,255,255,0.07)', borderRadius: 99, overflow: 'hidden', marginBottom: 0 },
+  goalBarTrack: { marginHorizontal: 2, height: 7, borderRadius: 99, overflow: 'hidden', marginBottom: 0 },
   goalBarFill: { height: '100%', borderRadius: 99 },
   goalPct: { fontFamily: Fonts.mono, fontSize: 11, fontWeight: '700', textAlign: 'right', paddingVertical: 4, letterSpacing: 0.5 },
 
-  // Carousel
-  carouselCard: {
-    backgroundColor: CARD_BG, borderWidth: 1, borderColor: CARD_BD,
-    borderRadius: 16, overflow: 'hidden', marginBottom: 14,
-  },
+  carouselCard: { borderWidth: 1, borderRadius: 16, overflow: 'hidden', marginBottom: 0 },
   slide: { padding: 16, paddingBottom: 12 },
-  slideEyebrow: { fontFamily: Fonts.bodyBd, fontSize: 12, letterSpacing: 2.5, color: accent, textTransform: 'uppercase', marginBottom: 4 },
-  slideTitle: { fontFamily: Fonts.bodyBd, fontSize: 18, color: Colors.text },
-  slideTitle14: { fontFamily: Fonts.bodyBd, fontSize: 15, color: Colors.text },
-  slideSub: { fontFamily: Fonts.mono, fontSize: 12, color: Colors.muted, marginTop: 2, marginBottom: 12 },
+  slideEyebrow: { fontFamily: Fonts.bodyBd, fontSize: 12, letterSpacing: 2.5, textTransform: 'uppercase', marginBottom: 4 },
+  slideTitle: { fontFamily: Fonts.bodyBd, fontSize: 18 },
+  slideSub: { fontFamily: Fonts.mono, fontSize: 12, marginTop: 2, marginBottom: 12 },
 
-  statsRow2: { flexDirection: 'row', gap: 8, marginBottom: 8 },
   statsRow3: { flexDirection: 'row', gap: 8 },
-  statCard: {
-    flex: 1, backgroundColor: 'rgba(255,255,255,0.04)',
-    borderWidth: 1, borderColor: CARD_BD, borderRadius: 10,
-    padding: 8, alignItems: 'center',
-  },
-  statLabel: { fontFamily: Fonts.bodyBd, fontSize: 11, letterSpacing: 1, color: Colors.muted, textTransform: 'uppercase', marginBottom: 4 },
-  statValue: { fontFamily: Fonts.mono, fontSize: 20, fontWeight: '700', color: Colors.text, lineHeight: 24 },
-  statUnit: { fontFamily: Fonts.body, fontSize: 12, color: Colors.muted },
+  statCard: { flex: 1, borderWidth: 1, borderRadius: 10, padding: 8, alignItems: 'center' },
+  statLabel: { fontFamily: Fonts.bodyBd, fontSize: 11, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 4 },
+  statValue: { fontFamily: Fonts.mono, fontSize: 20, fontWeight: '700', lineHeight: 24 },
+  statUnit: { fontFamily: Fonts.body, fontSize: 12 },
 
-  // Personal bests slide
   bestTimeBox: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    borderWidth: 1, borderColor: `${accent}30`, borderRadius: 12,
-    backgroundColor: `${accent}08`, padding: 12, marginBottom: 10,
+    borderWidth: 1, borderRadius: 12, padding: 12, marginBottom: 10,
   },
-  bestTimeLabel: { fontFamily: Fonts.bodyBd, fontSize: 10, color: Colors.muted, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 2 },
-  bestTimeValue: { fontFamily: Fonts.mono, fontSize: 30, fontWeight: '700', color: accent, lineHeight: 34 },
-  bestTimeUnit: { fontFamily: Fonts.mono, fontSize: 13, color: Colors.muted },
-  rankBadge: { alignItems: 'center', backgroundColor: `${accent}18`, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 8 },
-  rankBadgeNum: { fontFamily: Fonts.mono, fontSize: 22, fontWeight: '700', color: accent },
-  rankBadgeSub: { fontFamily: Fonts.body, fontSize: 11, color: Colors.muted },
-
-  partBadge: { width: 30, height: 30, borderRadius: 8, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
-  partBadgeText: { fontFamily: Fonts.mono, fontSize: 10, fontWeight: '700' },
-  timeBox: { borderWidth: 1, borderRadius: 10, padding: 10, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 10 },
-  timeBoxLabel: { fontFamily: Fonts.bodyBd, fontSize: 10, color: Colors.muted, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 2 },
-  timeBoxValue: { fontFamily: Fonts.mono, fontSize: 28, fontWeight: '700', color: Colors.text, lineHeight: 32 },
-  timeBoxUnit: { fontFamily: Fonts.mono, fontSize: 12, color: Colors.muted },
-  timeDelta: { fontFamily: Fonts.mono, fontSize: 14, fontWeight: '700', color: '#dc2626' },
-  timeVs: { fontFamily: Fonts.body, fontSize: 11, color: Colors.muted, marginTop: 2 },
-  timeRecord: { fontFamily: Fonts.body, fontSize: 11, color: Colors.dim },
+  bestTimeLabel: { fontFamily: Fonts.bodyBd, fontSize: 10, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 2 },
+  bestTimeValue: { fontFamily: Fonts.mono, fontSize: 30, fontWeight: '700', lineHeight: 34 },
+  bestTimeUnit: { fontFamily: Fonts.mono, fontSize: 13 },
+  rankBadge: { alignItems: 'center', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 8 },
+  rankBadgeNum: { fontFamily: Fonts.mono, fontSize: 22, fontWeight: '700' },
+  rankBadgeSub: { fontFamily: Fonts.body, fontSize: 11 },
 
   rankRow: {
     flexDirection: 'row', alignItems: 'center', gap: 7,
     padding: 7, paddingHorizontal: 10, borderRadius: 9, marginBottom: 4,
-    backgroundColor: 'rgba(255,255,255,0.03)', borderWidth: 1, borderColor: CARD_BD,
+    borderWidth: 1,
   },
-  rankNum: { fontFamily: Fonts.mono, fontSize: 11, color: Colors.dim, width: 18 },
-  rankName: { flex: 1, fontFamily: Fonts.body, fontSize: 13, color: Colors.text },
-  rankTime: { fontFamily: Fonts.mono, fontSize: 13, fontWeight: '700', color: Colors.text },
+  rankNum: { fontFamily: Fonts.mono, fontSize: 11, width: 18 },
+  rankName: { flex: 1, fontFamily: Fonts.body, fontSize: 13 },
+  rankTime: { fontFamily: Fonts.mono, fontSize: 13, fontWeight: '700' },
   rankDelta: { fontFamily: Fonts.mono, fontSize: 11, width: 38, textAlign: 'right' },
 
   dotsRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingBottom: 12, paddingTop: 4 },
-  dotsLabel: { fontFamily: Fonts.body, fontSize: 11, color: Colors.dim, textTransform: 'uppercase', letterSpacing: 1, flex: 1 },
+  dotsLabel: { fontFamily: Fonts.body, fontSize: 11, textTransform: 'uppercase', letterSpacing: 1, flex: 1 },
   dot: { width: 5, height: 5, borderRadius: 99, backgroundColor: 'rgba(255,255,255,0.18)' },
 
-  // Day sessions
   dayRow: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
-    padding: 11, paddingHorizontal: 14,
-    backgroundColor: CARD_BG, borderWidth: 1, borderColor: CARD_BD, borderRadius: 12,
+    padding: 11, paddingHorizontal: 14, borderWidth: 1, borderRadius: 12,
   },
-  dayLabel: { fontFamily: Fonts.bodyBd, fontSize: 15, color: Colors.text },
-  dayRuns: { fontFamily: Fonts.body, fontSize: 12, color: Colors.dim, marginTop: 1 },
+  dayLabel: { fontFamily: Fonts.bodyBd, fontSize: 15 },
+  dayRuns: { fontFamily: Fonts.body, fontSize: 12, marginTop: 1 },
   dayTime: { fontFamily: Fonts.mono, fontSize: 15, fontWeight: '700' },
-  dayAir: { fontFamily: Fonts.body, fontSize: 12, color: Colors.muted, marginTop: 1 },
-  dayChevron: { fontFamily: Fonts.body, fontSize: 14, color: Colors.dim, marginLeft: 2 },
+  dayAir: { fontFamily: Fonts.body, fontSize: 12, marginTop: 1 },
+  dayChevron: { fontFamily: Fonts.body, fontSize: 14, marginLeft: 2 },
   dayExpanded: {
-    backgroundColor: CARD_BG, borderLeftWidth: 1, borderRightWidth: 1, borderBottomWidth: 1,
-    borderColor: CARD_BD, borderBottomLeftRadius: 12, borderBottomRightRadius: 12,
-    padding: 14,
+    borderLeftWidth: 1, borderRightWidth: 1, borderBottomWidth: 1,
+    borderBottomLeftRadius: 12, borderBottomRightRadius: 12, padding: 14,
   },
-  chartLabel: { fontFamily: Fonts.bodyBd, fontSize: 10, letterSpacing: 1.5, color: Colors.dim, textTransform: 'uppercase', marginBottom: 6 },
+  chartLabel: { fontFamily: Fonts.bodyBd, fontSize: 10, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 6 },
 
-  // Show more
   showMoreBtn: {
     alignItems: 'center', paddingVertical: 12, marginTop: 2,
-    borderWidth: 1, borderColor: CARD_BD, borderRadius: 12,
-    backgroundColor: CARD_BG,
+    borderWidth: 1, borderRadius: 12,
   },
-  showMoreText: {
-    fontFamily: Fonts.bodyBd, fontSize: 13, letterSpacing: 1,
-    color: Colors.muted, textTransform: 'uppercase',
-  },
+  showMoreText: { fontFamily: Fonts.bodyBd, fontSize: 13, letterSpacing: 1, textTransform: 'uppercase' },
 })

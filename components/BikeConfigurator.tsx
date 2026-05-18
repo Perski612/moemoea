@@ -27,7 +27,8 @@ export function BikeConfigurator({ initial, accent = Colors.accent, onSave }: Pr
   const [customUrl, setCustomUrl] = useState(initial.avatarUrl || DEFAULT_AVATAR_URL)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
-  const [openSection, setOpenSection] = useState<Section>('rider')
+  const [openSections, setOpenSections] = useState<Record<Section, boolean>>({ rider: false, bike: false })
+  const toggle = (s: Section) => setOpenSections(prev => ({ ...prev, [s]: !prev[s] }))
 
   const set = (patch: Partial<Draft>) => {
     setDraft((prev) => ({ ...prev, ...patch }))
@@ -46,7 +47,7 @@ export function BikeConfigurator({ initial, accent = Colors.accent, onSave }: Pr
 
   return (
     <View style={styles.container}>
-      <SectionPanel title="Fahrer" open={openSection === 'rider'} onPress={() => setOpenSection(openSection === 'rider' ? 'bike' : 'rider')}>
+      <SectionPanel title="Fahrer" open={openSections.rider} onPress={() => toggle('rider')}>
         <ConfigRow label="Avatar">
           <View style={styles.avatarPresetGrid}>
             {AVATAR_PRESETS.map((preset) => {
@@ -93,7 +94,7 @@ export function BikeConfigurator({ initial, accent = Colors.accent, onSave }: Pr
         </ConfigRow>
       </SectionPanel>
 
-      <SectionPanel title="Bike" open={openSection === 'bike'} onPress={() => setOpenSection(openSection === 'bike' ? 'rider' : 'bike')}>
+      <SectionPanel title="Bike" open={openSections.bike} onPress={() => toggle('bike')}>
         <ConfigRow label="Fahrrad-Typ">
           <View style={styles.bikeTypeRow}>
             {BIKE_TYPE_OPTIONS.map(({ value, label, img }) => {
