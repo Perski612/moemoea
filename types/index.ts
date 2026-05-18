@@ -1,3 +1,5 @@
+export type Tier = 'rookie' | 'veteran' | 'legend'
+
 export interface Profile {
   $id: string
   userId: string
@@ -7,6 +9,7 @@ export interface Profile {
   level: number
   approved: boolean
   isAdmin: boolean
+  tier: Tier
   $createdAt: string
 }
 
@@ -21,4 +24,41 @@ export interface BikeConfig {
   jerseyD: string
 }
 
-export type Tier = 'rookie' | 'veteran' | 'legend'
+export interface Session {
+  $id: string
+  userId: string
+  date: string
+  trailId: string
+  $createdAt: string
+}
+
+export interface Run {
+  $id: string
+  sessionId: string
+  userId: string
+  username: string
+  tier: Tier
+  startedAt: string
+  totalTime: number
+  p1Time: number | null
+  p2Time: number | null
+  maxAirtime: number
+  maxSpeed: number
+  maxGForce: number
+  distance: number
+  dataSource: 'phone' | 'external'
+  $createdAt: string
+}
+
+export interface ClipPost {
+  $id: string
+  userId: string
+  username: string
+  tier: Tier
+  runId: string | null
+  contestMonth: string
+  verified: boolean
+  fireCount: number
+  firedBy: string[]
+  $createdAt: string
+}
