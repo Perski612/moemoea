@@ -1,11 +1,23 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import { Accelerometer, Gyroscope } from 'expo-sensors'
+import * as Location from 'expo-location'
 import { useQueryClient } from '@tanstack/react-query'
 import { AppHeader } from '@/components/ui/AppHeader'
+import { GlassBackground } from '@/components/ui/GlassBackground'
 import { useAuthStore } from '@/stores/useAuthStore'
 import { useProfileStore } from '@/stores/useProfileStore'
 import { useRunStore } from '@/stores/useRunStore'
+import { databases, DB_ID, RUNS_ID, Query } from '@/lib/appwrite'
+import { calculateRunXp } from '@/lib/xp'
+import {
+  initialTrailDetectionState,
+  trailRulesToLines,
+  updateTrailDetection,
+  type TrailDetectionState,
+} from '@/lib/trailDetection'
+import { useTrailRulesStore } from '@/stores/useTrailRulesStore'
+import { TpRewardModal, type TpBreakdown } from '@/components/TpRewardModal'
 import { Colors, Fonts, Radius } from '@/constants/theme'
 import { useTheme } from '@/hooks/useTheme'
 
@@ -123,12 +135,16 @@ function AxisRows({ title, value, unit }: { title: string; value: SensorVector; 
 }
 
 export default function SensorScreen() {
-  const { theme } = useTheme()
+  useTheme()
   const queryClient = useQueryClient()
   const session = useAuthStore((state) => state.session)
   const profile = useProfileStore((state) => state.profile)
+  const { addPendingXp } = useProfileStore()
   const createSession = useRunStore((state) => state.createSession)
   const createRun = useRunStore((state) => state.createRun)
+  const getPersonalBests = useRunStore((state) => state.getPersonalBests)
+  const fetchTrailRules = useTrailRulesStore((state) => state.fetchRules)
+  const trailRules = useTrailRulesStore((state) => state.rules)
 
   const [running, setRunning] = useState(false)
   const [accelerometer, setAccelerometer] = useState<SensorVector>(emptyVector)
@@ -143,9 +159,19 @@ export default function SensorScreen() {
   const [saving, setSaving] = useState(false)
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null)
   const [events, setEvents] = useState<DetectedEvent[]>([])
+  const [tpModal, setTpModal] = useState<TpBreakdown | null>(null)
+  const [autoArmed, setAutoArmed] = useState(false)
+  const [locationPermission, setLocationPermission] = useState<'unknown' | 'granted' | 'denied'>('unknown')
+  const [trailState, setTrailState] = useState<TrailDetectionState>(initialTrailDetectionState)
+  const [speedKmh, setSpeedKmh] = useState(0)
+  const [gpsAccuracy, setGpsAccuracy] = useState<number | null>(null)
 
   const accelerometerSubscription = useRef<SensorSubscription | null>(null)
   const gyroscopeSubscription = useRef<SensorSubscription | null>(null)
+  const locationSubscription = useRef<Location.LocationSubscription | null>(null)
+  const runningRef = useRef(false)
+  const startedAtRef = useRef<number | null>(null)
+  const trailRulesRef = useRef(trailRules)
   const latestGyro = useRef<SensorVector>(emptyVector)
   const previousG = useRef(0)
   const previousAt = useRef<number | null>(null)
@@ -162,6 +188,18 @@ export default function SensorScreen() {
 
   const gForce = useMemo(() => vectorMagnitude(accelerometer), [accelerometer])
   const rotationRate = useMemo(() => vectorMagnitude(gyroscope), [gyroscope])
+
+  useEffect(() => {
+    runningRef.current = running
+  }, [running])
+
+  useEffect(() => {
+    startedAtRef.current = startedAt
+  }, [startedAt])
+
+  useEffect(() => {
+    trailRulesRef.current = trailRules
+  }, [trailRules])
 
   const pushEvent = (kind: EventKind, confidence: number, detail: string, now: number, cooldownMs = 900) => {
     if (now < eventCooldownUntil.current[kind]) return
@@ -288,6 +326,25 @@ export default function SensorScreen() {
     })
   }
 
+  const toggleAutoArmed = async () => {
+    if (autoArmed) {
+      setAutoArmed(false)
+      return
+    }
+
+    const permission = await Location.requestForegroundPermissionsAsync()
+    if (permission.status !== 'granted') {
+      setLocationPermission('denied')
+      Alert.alert('Standort fehlt', 'Für Auto-Erkennung braucht die App Standortzugriff.')
+      return
+    }
+
+    setLocationPermission('granted')
+    setTrailState(initialTrailDetectionState)
+    await fetchTrailRules().catch(() => [])
+    setAutoArmed(true)
+  }
+
   useEffect(() => {
     if (!running) {
       accelerometerSubscription.current?.remove()
@@ -311,6 +368,71 @@ export default function SensorScreen() {
     }
   }, [running])
 
+  useEffect(() => {
+    if (!autoArmed) {
+      locationSubscription.current?.remove()
+      locationSubscription.current = null
+      return
+    }
+
+    let cancelled = false
+
+    async function watchTrail() {
+      locationSubscription.current = await Location.watchPositionAsync(
+        {
+          accuracy: Location.Accuracy.BestForNavigation,
+          distanceInterval: 2,
+          timeInterval: 1000,
+        },
+        (location) => {
+          if (cancelled) return
+
+          const sample = {
+            latitude: location.coords.latitude,
+            longitude: location.coords.longitude,
+            accuracyM: location.coords.accuracy,
+            speedMs: location.coords.speed,
+            timestampMs: location.timestamp,
+          }
+
+          setGpsAccuracy(location.coords.accuracy)
+          setSpeedKmh(Math.max(0, (location.coords.speed ?? 0) * 3.6))
+          setTrailState((current) => {
+            const next = updateTrailDetection(current, sample, undefined, trailRulesToLines(trailRulesRef.current))
+
+            if (next.status === 'running' && !runningRef.current) {
+              runningRef.current = true
+              const startMs = next.startedAtMs ?? Date.now()
+              startedAtRef.current = startMs
+              setStartedAt(startMs)
+              setLastSavedAt(null)
+              setRunning(true)
+            }
+
+            if (next.status === 'finished' && runningRef.current) {
+              runningRef.current = false
+              setRunning(false)
+              setAutoArmed(false)
+            }
+
+            return next
+          })
+        },
+      )
+    }
+
+    watchTrail().catch((error: any) => {
+      setAutoArmed(false)
+      Alert.alert('GPS fehlgeschlagen', error?.message ?? 'Standort konnte nicht gestartet werden.')
+    })
+
+    return () => {
+      cancelled = true
+      locationSubscription.current?.remove()
+      locationSubscription.current = null
+    }
+  }, [autoArmed])
+
   const reset = () => {
     setAccelerometer(emptyVector)
     setGyroscope(emptyVector)
@@ -323,6 +445,9 @@ export default function SensorScreen() {
     setStartedAt(null)
     setLastSavedAt(null)
     setEvents([])
+    setTrailState(initialTrailDetectionState)
+    setSpeedKmh(0)
+    setGpsAccuracy(null)
     latestGyro.current = emptyVector
     previousG.current = 0
     previousAt.current = null
@@ -345,29 +470,55 @@ export default function SensorScreen() {
 
     setSaving(true)
     try {
-      const createdSession = await createSession(session.userId, todayId())
-      await createRun({
+      const airtime    = Number((bestAirMs / 1000).toFixed(3))
+      const gforce     = Number(maxG.toFixed(3))
+      const totalTime  = Number(elapsedSeconds.toFixed(2))
+
+      // Fetch PBs before saving so we can compare
+      const [pbs, createdSession] = await Promise.all([
+        getPersonalBests(session.userId),
+        createSession(session.userId, todayId()),
+      ])
+
+      // First run of the day = no runs in today's session yet
+      const existingRes = await databases.listDocuments(DB_ID, RUNS_ID, [
+        Query.equal('sessionId', createdSession.$id),
+        Query.limit(1),
+      ])
+      const isFirstRunOfDay = existingRes.total === 0
+
+      const run = await createRun({
         sessionId: createdSession.$id,
         userId: session.userId,
         username: profile.username,
         tier: profile.tier ?? 'rookie',
         startedAt: new Date(startedAt).toISOString(),
-        totalTime: Number(elapsedSeconds.toFixed(2)),
+        totalTime,
         p1Time: null,
         p2Time: null,
-        maxAirtime: Number((bestAirMs / 1000).toFixed(3)),
+        maxAirtime: airtime,
         maxSpeed: 0,
-        maxGForce: Number(maxG.toFixed(3)),
+        maxGForce: gforce,
         distance: 0,
         dataSource: 'phone',
       })
+
+      const pbFlags = {
+        totalTime:  pbs.totalTime  === null || totalTime < pbs.totalTime,
+        maxAirtime: pbs.maxAirtime === null || airtime   > pbs.maxAirtime,
+        maxSpeed:   false, // speed not tracked in sensor mode
+      }
+
+      const { total, base, sensor, pb, daily } = calculateRunXp(run, pbFlags, isFirstRunOfDay)
+      await addPendingXp(total)
 
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['profile-stats'] }),
         queryClient.invalidateQueries({ queryKey: ['monthly-streak'] }),
       ])
+
       setLastSavedAt(new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' }))
-      Alert.alert('Gespeichert', 'Sensor-Test wurde als Run gespeichert.')
+      setTpModal({ total, base, sensor, pb, daily })
     } catch (error: any) {
       Alert.alert('Speichern fehlgeschlagen', error?.message ?? 'Unbekannter Fehler')
     } finally {
@@ -376,7 +527,7 @@ export default function SensorScreen() {
   }
 
   return (
-    <View style={[styles.screen, { backgroundColor: theme.bg }]}>
+    <GlassBackground>
       <AppHeader />
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.hero}>
@@ -394,6 +545,14 @@ export default function SensorScreen() {
               <Text style={styles.secondaryButtonText}>Reset</Text>
             </TouchableOpacity>
           </View>
+          <TouchableOpacity
+            style={[styles.autoButton, autoArmed && styles.autoButtonActive]}
+            onPress={toggleAutoArmed}
+          >
+            <Text style={[styles.autoButtonText, autoArmed && styles.autoButtonTextActive]}>
+              {autoArmed ? 'Auto-Erkennung aktiv' : 'Auto-Erkennung scharfstellen'}
+            </Text>
+          </TouchableOpacity>
           <TouchableOpacity
             style={[styles.saveButton, (!canSave || saving) && styles.disabledButton]}
             onPress={saveTestRun}
@@ -413,8 +572,22 @@ export default function SensorScreen() {
           <ValueTile label="ROTATION" value={fmt(rotationRate)} unit="rad/s" />
           <ValueTile label="JERK" value={fmt(jerk, 1)} unit="g/s" />
           <ValueTile label="MAX ROT" value={fmt(maxRotation)} unit="rad/s" />
+          <ValueTile label="GPS SPEED" value={fmt(speedKmh, 1)} unit="km/h" />
+          <ValueTile label="GPS ACC" value={gpsAccuracy === null ? '—' : fmt(gpsAccuracy, 0)} unit="m" />
           <ValueTile label="DAUER" value={fmt(elapsedSeconds, 1)} unit="s" />
           <ValueTile label="STATE" value={activeCandidate} unit="debug" highlight />
+        </View>
+
+        <View style={styles.panel}>
+          <View style={styles.panelHeader}>
+            <Text style={styles.panelTitle}>Trail Auto-Erkennung</Text>
+            <Text style={styles.panelSub}>{trailState.activeLineId?.toUpperCase() ?? '—'}</Text>
+          </View>
+          <Text style={styles.detectorStatus}>{trailState.status}</Text>
+          <Text style={styles.emptyText}>{trailState.reason}</Text>
+          <Text style={styles.saveHint}>
+            Permission: {locationPermission} · Confidence: {Math.round(trailState.confidence * 100)}%
+          </Text>
         </View>
 
         <View style={styles.panel}>
@@ -440,7 +613,15 @@ export default function SensorScreen() {
           </Text>
         </View>
       </ScrollView>
-    </View>
+
+      {tpModal && (
+        <TpRewardModal
+          visible={Boolean(tpModal)}
+          breakdown={tpModal}
+          onDismiss={() => setTpModal(null)}
+        />
+      )}
+    </GlassBackground>
   )
 }
 
@@ -517,6 +698,29 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.text,
     textTransform: 'uppercase',
+  },
+  autoButton: {
+    height: 42,
+    borderRadius: Radius.sm,
+    borderWidth: 1,
+    borderColor: `${Colors.accent}44`,
+    backgroundColor: `${Colors.accent}0d`,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 10,
+  },
+  autoButtonActive: {
+    borderColor: Colors.accent,
+    backgroundColor: `${Colors.accent}22`,
+  },
+  autoButtonText: {
+    fontFamily: Fonts.bodyBd,
+    fontSize: 12,
+    color: Colors.accent,
+    textTransform: 'uppercase',
+  },
+  autoButtonTextActive: {
+    color: Colors.text,
   },
   saveButton: {
     height: 44,
@@ -606,6 +810,12 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.body,
     fontSize: 12,
     color: Colors.muted,
+  },
+  detectorStatus: {
+    fontFamily: Fonts.monoBd,
+    fontSize: 18,
+    color: Colors.accent,
+    textTransform: 'uppercase',
   },
   eventRow: {
     minHeight: 54,

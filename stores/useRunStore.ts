@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { databases, DB_ID, SESSIONS_ID, RUNS_ID, ID, Permission, Role, Query } from '@/lib/appwrite'
-import type { Session, Run, Tier } from '@/types'
+import type { Session, Run, Tier, ActiveRider } from '@/types'
 
 interface WeeklyStats { distance: number; airtime: number; topSpeed: number }
 interface WeeklyRankEntry { rank: number; username: string; tier: Tier; totalTime: number; delta: string; isMe?: boolean }
@@ -33,6 +33,7 @@ interface RunState {
     section: 'gesamt' | 'p1' | 'p2',
     limit?: number
   ) => Promise<LeaderboardEntry[]>
+  getActiveRiders: () => Promise<ActiveRider[]>
 }
 
 function weekBounds(): { start: string; end: string } {
@@ -198,5 +199,24 @@ export const useRunStore = create<RunState>(() => ({
     }
 
     return bestPerUser(runs, getValue, ascending).slice(0, limit)
+  },
+
+  getActiveRiders: async () => {
+    const threshold = new Date(Date.now() - 15 * 60 * 1000).toISOString()
+    const res = await databases.listDocuments(DB_ID, RUNS_ID, [
+      Query.greaterThanEqual('startedAt', threshold),
+      Query.orderDesc('startedAt'),
+      Query.limit(100),
+    ])
+    const runs = res.documents as unknown as Run[]
+    const seen = new Set<string>()
+    const riders: ActiveRider[] = []
+    for (const run of runs) {
+      if (!seen.has(run.userId)) {
+        seen.add(run.userId)
+        riders.push({ userId: run.userId, username: run.username, tier: run.tier, lastRun: run })
+      }
+    }
+    return riders
   },
 }))

@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { databases, DB_ID, PROFILES_ID, BIKE_CONFIGS_ID, Permission, Role, ID } from '@/lib/appwrite'
 import type { Profile, BikeConfig } from '@/types'
+import { getLevelFromXp } from '@/lib/xp'
 
 interface ProfileState {
   profile: Profile | null
@@ -9,6 +10,8 @@ interface ProfileState {
   setBikeConfig: (b: BikeConfig) => void
   syncFromAppwrite: (userId: string) => Promise<void>
   saveBikeConfig: (config: Omit<BikeConfig, '$id' | 'userId'>) => Promise<void>
+  addPendingXp: (amount: number) => Promise<void>
+  claimPendingXp: () => Promise<{ claimed: number; levelUps: number } | null>
   clear: () => void
 }
 
@@ -26,6 +29,33 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
       databases.getDocument(DB_ID, BIKE_CONFIGS_ID, userId).catch(() => null),
     ])
     set({ profile: profile as unknown as Profile, bikeConfig: bikeConfig as unknown as BikeConfig | null })
+  },
+
+  addPendingXp: async (amount) => {
+    const profile = get().profile
+    if (!profile) return
+    const newPending = (profile.pendingXp ?? 0) + amount
+    await databases.updateDocument(DB_ID, PROFILES_ID, profile.$id, { pendingXp: newPending })
+    set({ profile: { ...profile, pendingXp: newPending } })
+  },
+
+  claimPendingXp: async () => {
+    const profile = get().profile
+    if (!profile || !profile.pendingXp) return null
+
+    const claimed = profile.pendingXp
+    const oldLevel = profile.level
+    const newXp = profile.xp + claimed
+    const newLevel = getLevelFromXp(newXp)
+
+    await databases.updateDocument(DB_ID, PROFILES_ID, profile.$id, {
+      xp: newXp,
+      level: newLevel,
+      pendingXp: 0,
+    })
+    set({ profile: { ...profile, xp: newXp, level: newLevel, pendingXp: 0 } })
+
+    return { claimed, levelUps: newLevel - oldLevel }
   },
 
   saveBikeConfig: async (config) => {

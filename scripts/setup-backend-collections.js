@@ -144,11 +144,35 @@ async function ensureIndex(collectionId, payload) {
 }
 
 async function ensureProfileTier() {
+  await ensureProfilePermissions()
+  await ensureAttribute('profiles', 'integer', {
+    key: 'pendingXp',
+    required: false,
+    default: 0,
+    min: 0,
+    max: 999999,
+  })
   await ensureAttribute('profiles', 'enum', {
     key: 'tier',
     elements: ['rookie', 'veteran', 'legend'],
     required: false,
     default: 'rookie',
+  })
+}
+
+async function ensureProfilePermissions() {
+  const collection = await req('GET', `/databases/${DB_ID}/collections/profiles`)
+  const permissions = new Set(collection.$permissions ?? [])
+  permissions.add('create("users")')
+  permissions.add('read("any")')
+  permissions.add('update("users")')
+  permissions.add('update("team:admins")')
+
+  await req('PUT', `/databases/${DB_ID}/collections/profiles`, {
+    name: collection.name ?? 'profiles',
+    permissions: Array.from(permissions),
+    documentSecurity: false,
+    enabled: collection.enabled ?? true,
   })
 }
 
@@ -264,6 +288,30 @@ async function setupClipPosts() {
   })
 }
 
+async function setupTrailRules() {
+  await ensureCollection('trail_rules', 'trail_rules')
+  await ensureAttribute('trail_rules', 'enum', { key: 'lineId', elements: ['p1', 'p2'], required: true })
+  await ensureAttribute('trail_rules', 'string', { key: 'name', size: 32, required: true })
+  await ensureAttribute('trail_rules', 'boolean', { key: 'enabled', required: true })
+  await ensureAttribute('trail_rules', 'float', { key: 'startLat', required: true })
+  await ensureAttribute('trail_rules', 'float', { key: 'startLon', required: true })
+  await ensureAttribute('trail_rules', 'float', { key: 'finishLat', required: true })
+  await ensureAttribute('trail_rules', 'float', { key: 'finishLon', required: true })
+  await ensureAttribute('trail_rules', 'float', { key: 'startRadiusM', required: true, min: 5, max: 200 })
+  await ensureAttribute('trail_rules', 'float', { key: 'finishRadiusM', required: true, min: 5, max: 200 })
+  await ensureAttribute('trail_rules', 'float', { key: 'minStartSpeedMs', required: true, min: 0, max: 20 })
+  await ensureAttribute('trail_rules', 'float', { key: 'directionToleranceDeg', required: true, min: 10, max: 180 })
+  await ensureAttribute('trail_rules', 'string', { key: 'testSamples', size: 12000, required: false, default: '[]' })
+  await ensureAttribute('trail_rules', 'string', { key: 'updatedBy', size: 36, required: true })
+
+  await ensureIndex('trail_rules', {
+    key: 'by_line',
+    type: 'unique',
+    attributes: ['lineId'],
+    orders: ['ASC'],
+  })
+}
+
 async function main() {
   console.log('Setting up Appwrite backend collections...')
   console.log(`Project: ${PROJECT_ID}`)
@@ -274,6 +322,7 @@ async function main() {
   await setupSessions()
   await setupRuns()
   await setupClipPosts()
+  await setupTrailRules()
 
   console.log('Backend collections are ready.')
 }

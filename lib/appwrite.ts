@@ -18,6 +18,8 @@ export const BIKE_CONFIGS_ID = process.env.EXPO_PUBLIC_BIKE_CONFIGS_ID ?? ''
 export const SESSIONS_ID     = process.env.EXPO_PUBLIC_SESSIONS_ID     ?? ''
 export const RUNS_ID         = process.env.EXPO_PUBLIC_RUNS_ID         ?? ''
 export const CLIP_POSTS_ID   = process.env.EXPO_PUBLIC_CLIP_POSTS_ID   ?? ''
+export const TRAIL_RULES_ID    = process.env.EXPO_PUBLIC_TRAIL_RULES_ID    ?? 'trail_rules'
+export const TRAIL_FEATURES_ID = process.env.EXPO_PUBLIC_TRAIL_FEATURES_ID ?? 'trail_features'
 
 export const IS_DEMO = !process.env.EXPO_PUBLIC_APPWRITE_ENDPOINT
 

@@ -1,14 +1,22 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ScrollView, View, Text, TouchableOpacity, StyleSheet, Dimensions } from 'react-native'
-import { useFocusEffect } from 'expo-router'
+import { useFocusEffect, router } from 'expo-router'
 import Svg, { Path, Defs, LinearGradient, Stop } from 'react-native-svg'
 import { AppHeader } from '@/components/ui/AppHeader'
+import { GlassBackground } from '@/components/ui/GlassBackground'
+import { GlassCard } from '@/components/ui/GlassCard'
 import { Fonts } from '@/constants/theme'
+import { xpProgressInLevel } from '@/lib/xp'
 import { useAuthStore } from '@/stores/useAuthStore'
 import { useRunStore } from '@/stores/useRunStore'
 import { useProfileStore } from '@/stores/useProfileStore'
 import { useTheme, Theme } from '@/hooks/useTheme'
 import type { Tier } from '@/types'
+import { LiveTrailWidget } from '@/components/LiveTrailWidget'
+import { XpBar } from '@/components/XpBar'
+import { RankUpModal } from '@/components/RankUpModal'
+import type { ActiveRider } from '@/types'
+import type { EmblemDef } from '@/lib/emblems'
 
 const { width: SCREEN_W } = Dimensions.get('window')
 const CARD_W = SCREEN_W - 32
@@ -236,7 +244,7 @@ function Carousel({ bests, weeklyRanking, accent, theme }: {
   ]
 
   return (
-    <View style={[s.carouselCard, { backgroundColor: theme.cardBg, borderColor: theme.cardBorder }]}>
+    <GlassCard style={s.carouselCard} padding={0}>
       <ScrollView
         ref={scrollRef}
         horizontal pagingEnabled showsHorizontalScrollIndicator={false}
@@ -258,7 +266,7 @@ function Carousel({ bests, weeklyRanking, accent, theme }: {
           ))}
         </View>
       </View>
-    </View>
+    </GlassCard>
   )
 }
 
@@ -285,12 +293,12 @@ function DayRow({ day, expanded, onToggle, accent, theme }: {
         <Text style={[s.dayChevron, { color: theme.dim }, expanded && { transform: [{ rotate: '180deg' }] }]}>▾</Text>
       </TouchableOpacity>
       {expanded && (
-        <View style={[s.dayExpanded, { backgroundColor: theme.cardBg, borderColor: theme.cardBorder }]}>
+        <GlassCard style={s.dayExpanded} padding={12}>
           <Text style={[s.chartLabel, { color: theme.dim }]}>Airtime pro Run (s)</Text>
           <MiniChart data={day.airtimeData} color={accent} />
           <Text style={[s.chartLabel, { color: theme.dim, marginTop: 12 }]}>Rundenzeiten (s) — niedriger = besser</Text>
           <MiniChart data={day.runTimeData} color="#60a5fa" />
-        </View>
+        </GlassCard>
       )}
     </View>
   )
@@ -298,8 +306,8 @@ function DayRow({ day, expanded, onToggle, accent, theme }: {
 
 export default function DashboardScreen() {
   const { session } = useAuthStore()
-  const profile = useProfileStore(s => s.profile)
-  const { getSessionsWithRuns, getPersonalBests, getWeeklyStats, getWeeklyRanking } = useRunStore()
+  const { profile, bikeConfig } = useProfileStore()
+  const { getSessionsWithRuns, getPersonalBests, getWeeklyStats, getWeeklyRanking, getActiveRiders } = useRunStore()
   const { theme, accent } = useTheme()
 
   const [daySessions, setDaySessions] = useState<DaySession[]>([])
@@ -310,10 +318,11 @@ export default function DashboardScreen() {
     p2:     { time: '—', airtime: '—', speed: '—', gforce: '—', rank: '#—', rankOf: 0 },
   })
   const [weeklyGoals, setWeeklyGoals] = useState({ distance: 0, airtime: 0, topSpeed: 0 })
-  const [tp, setTp] = useState(0)
-  const tpMax = 4000
+  const [activeRiders, setActiveRiders] = useState<ActiveRider[]>([])
   const [expandedDay, setExpandedDay] = useState<number | null>(null)
   const [showAllSessions, setShowAllSessions] = useState(false)
+  const [isFocused, setIsFocused] = useState(false)
+  const [rankUpData, setRankUpData] = useState<{ newEmblem: EmblemDef; oldEmblem: EmblemDef } | null>(null)
   const userId = session?.userId
 
   const loadDashboard = useCallback(() => {
@@ -337,7 +346,6 @@ export default function DashboardScreen() {
         p1:     { time: fmtTime(pb.p1Time), airtime: '—', speed: '—', gforce: '—', rank: '#—', rankOf: 0 },
         p2:     { time: fmtTime(pb.p2Time), airtime: '—', speed: '—', gforce: '—', rank: '#—', rankOf: 0 },
       })
-      setTp(Math.round((pb.maxAirtime ?? 0) * 100 + (pb.maxSpeed ?? 0) * 10))
     })
 
     getWeeklyStats(userId).then(setWeeklyGoals)
@@ -348,48 +356,77 @@ export default function DashboardScreen() {
         time: fmtTime(r.totalTime), delta: r.delta, isMe: r.isMe,
       })))
     })
-  }, [getPersonalBests, getSessionsWithRuns, getWeeklyRanking, getWeeklyStats, userId])
+    getActiveRiders().then(setActiveRiders)
+  }, [getPersonalBests, getSessionsWithRuns, getWeeklyRanking, getWeeklyStats, getActiveRiders, userId])
 
-  useFocusEffect(loadDashboard)
+  useFocusEffect(useCallback(() => {
+    setIsFocused(true)
+    loadDashboard()
+    return () => setIsFocused(false)
+  }, [loadDashboard]))
 
   const visibleSessions = showAllSessions ? daySessions : daySessions.slice(0, SESSIONS_PREVIEW)
   const hasMore = daySessions.length > SESSIONS_PREVIEW
-  const level = Math.max(1, Math.floor(tp / 400) + 1)
+  const xp = profile?.xp ?? 0
+  const level = profile?.level ?? 1
+  const xpProgress = xpProgressInLevel(xp)
   const username = profile?.username ?? '—'
+  const resolvedBikeType = ((): 'hardtail' | 'enduro' | 'downhill' => {
+    const t = bikeConfig?.bikeType as string | undefined
+    if (t === 'enduro' || t === 'downhill' || t === 'hardtail') return t
+    if (t === 'fully') return 'enduro'
+    return 'hardtail'
+  })()
 
   return (
-    <View style={{ flex: 1, backgroundColor: theme.bg }}>
+    <GlassBackground>
       <AppHeader />
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{ padding: 16, paddingBottom: 110 }}
         showsVerticalScrollIndicator={false}
       >
-        {/* Level / TP bar */}
-        <View style={{ paddingTop: 12, paddingBottom: 24 }}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <View style={[s.levelBadge, { backgroundColor: `${accent}1a`, borderColor: `${accent}44` }]}>
+        {/* Identity + XP */}
+        <View style={{ paddingTop: 8, paddingBottom: 8 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+            <View style={{ flex: 1 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 7 }}>
+                <Text style={[s.username, { color: theme.text }]}>{username}</Text>
+                <Text style={[s.bikeTypeInline, { color: accent }]}>{resolvedBikeType.toUpperCase()}</Text>
+              </View>
+              <Text style={[s.teamText, { color: theme.muted }]}>{profile?.team ?? 'Kein Team'}</Text>
+              <View style={[s.levelBadge, { borderColor: `${accent}44`, backgroundColor: `${accent}1a`, alignSelf: 'flex-start', marginTop: 6 }]}>
                 <Text style={[s.levelText, { color: accent }]}>LVL {level}</Text>
               </View>
-              <Text style={[s.levelName, { color: theme.text }]}>{username}</Text>
             </View>
-            <Text style={[s.tpText, { color: theme.muted }]}>
-              {tp.toLocaleString('de')}<Text style={{ color: accent }}>/{tpMax.toLocaleString('de')} TP</Text>
-            </Text>
+            <TouchableOpacity
+              onPress={() => router.push('/(app)/(tabs)/sensor')}
+              style={[s.recBtn, { backgroundColor: `${accent}18`, borderColor: `${accent}55` }]}
+              activeOpacity={0.75}
+            >
+              <View style={[s.recDot, { backgroundColor: accent }]} />
+              <Text style={[s.recLabel, { color: accent }]}>REC</Text>
+            </TouchableOpacity>
           </View>
-          <View style={[s.tpTrack, { backgroundColor: theme.cardBorder }]}>
-            <View style={[s.tpFill, { width: `${Math.min((tp / tpMax) * 100, 100)}%` as any, backgroundColor: accent, shadowColor: accent }]} />
-          </View>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 5 }}>
-            <Text style={[s.tpHint, { color: theme.dim }]}>{tpMax - tp} TP bis LVL {level + 1}</Text>
-            <Text style={[s.tpHint, { color: theme.dim }]}>Nächstes: Trail-Devil Badge</Text>
-          </View>
+          <XpBar
+            accent={accent}
+            isFocused={isFocused}
+            onRankUp={(newEmblem, oldEmblem) => setRankUpData({ newEmblem, oldEmblem })}
+          />
         </View>
 
         {/* Wochenziele */}
         <Text style={[s.sectionLabel, { color: accent }]}>Wochenziele</Text>
         <WeeklyGoals stats={weeklyGoals} accent={accent} theme={theme} />
+
+        {/* Live-Trail-Widget */}
+        <View style={{ marginTop: 16 }}>
+          <LiveTrailWidget
+            riders={activeRiders}
+            accent={accent}
+            theme={theme}
+          />
+        </View>
 
         {/* Bestleistungen Carousel */}
         <Text style={[s.sectionLabel, { color: accent, marginTop: 24 }]}>Bestleistungen</Text>
@@ -417,7 +454,13 @@ export default function DashboardScreen() {
           </TouchableOpacity>
         )}
       </ScrollView>
-    </View>
+      <RankUpModal
+        visible={rankUpData != null}
+        newEmblem={rankUpData?.newEmblem ?? null}
+        oldEmblem={rankUpData?.oldEmblem ?? null}
+        onDismiss={() => setRankUpData(null)}
+      />
+    </GlassBackground>
   )
 }
 
@@ -426,14 +469,19 @@ const s = StyleSheet.create({
     fontFamily: Fonts.bodyBd, fontSize: 12, letterSpacing: 2.5,
     textTransform: 'uppercase', opacity: 0.9, marginBottom: 10,
   },
+  username: { fontFamily: Fonts.bodyBd, fontSize: 20, fontWeight: '700' },
+  bikeTypeInline: { fontFamily: Fonts.mono, fontSize: 13, fontWeight: '700', letterSpacing: 1.5 },
+  teamText: { fontFamily: Fonts.body, fontSize: 13, marginTop: 2 },
+  recBtn: {
+    borderWidth: 1, borderRadius: 12,
+    paddingHorizontal: 16, paddingVertical: 8,
+    alignItems: 'center', justifyContent: 'center', gap: 5,
+  },
+  recDot: { width: 10, height: 10, borderRadius: 5 },
+  recLabel: { fontFamily: Fonts.mono, fontSize: 12, fontWeight: '700', letterSpacing: 2 },
   levelBadge: { borderWidth: 1, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 4 },
   levelText: { fontFamily: Fonts.mono, fontSize: 13, fontWeight: '700' },
   levelName: { fontFamily: Fonts.bodyBd, fontSize: 16 },
-  tpText: { fontFamily: Fonts.mono, fontSize: 12 },
-  tpTrack: { height: 7, borderRadius: 99, overflow: 'hidden' },
-  tpFill: { height: '100%', borderRadius: 99, shadowRadius: 6, shadowOpacity: 0.4 },
-  tpHint: { fontFamily: Fonts.body, fontSize: 11 },
-
   goalsRow: { flexDirection: 'row', gap: 8, marginBottom: 0 },
   goalCard: {
     flex: 1, borderWidth: 1, borderRadius: 12,

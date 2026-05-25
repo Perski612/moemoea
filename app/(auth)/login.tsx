@@ -20,7 +20,11 @@ export default function LoginScreen() {
     try {
       await login(email.trim(), password)
     } catch (e: any) {
-      Alert.alert('Login fehlgeschlagen', e?.message ?? 'Unbekannter Fehler')
+      const msg: string = e?.message ?? ''
+      const friendly = msg.toLowerCase().includes('rate')
+        ? 'Zu viele Versuche — bitte 1–2 Minuten warten und nochmal probieren.'
+        : msg || 'Unbekannter Fehler'
+      Alert.alert('Login fehlgeschlagen', friendly)
     } finally {
       setLoading(false)
     }

@@ -31,10 +31,8 @@ export default function RegisterScreen() {
       await account.createEmailPasswordSession(email.trim(), password)
 
       const permissions = [
-        Permission.read(Role.user(user.$id)),
+        Permission.read(Role.any()),
         Permission.write(Role.user(user.$id)),
-        Permission.read(Role.team('admins')),
-        Permission.write(Role.team('admins')),
       ]
 
       await databases.createDocument(DB_ID, PROFILES_ID, user.$id, {
@@ -42,9 +40,11 @@ export default function RegisterScreen() {
         username,
         team,
         xp: 0,
+        pendingXp: 0,
         level: 1,
         approved: false,
         isAdmin: false,
+        tier: 'rookie',
       }, permissions)
 
       await checkSession()

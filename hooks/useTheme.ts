@@ -8,8 +8,8 @@ export const DARK_THEME = {
   muted:      '#9a9490',
   dim:        '#6a6460',
   border:     'rgba(255,255,255,0.09)',
-  cardBg:     'rgba(255,255,255,0.025)',
-  cardBorder: 'rgba(255,255,255,0.07)',
+  cardBg:     'rgba(255,255,255,0.055)',
+  cardBorder: 'rgba(255,255,255,0.13)',
   tabBar:     'rgba(18,15,10,0.97)',
   tabBorder:  'rgba(255,255,255,0.09)',
 }
@@ -32,8 +32,10 @@ export type Theme = typeof DARK_THEME
 export function useTheme() {
   const systemScheme = useColorScheme()
   const { accentColor, colorScheme } = useSettingsStore()
+
   const isDark = colorScheme === 'system' ? systemScheme !== 'light' : colorScheme === 'dark'
   const theme = isDark ? DARK_THEME : LIGHT_THEME
   const accent = isDark ? accentColor : '#4a6e10'
+
   return { theme, accent, isDark }
 }

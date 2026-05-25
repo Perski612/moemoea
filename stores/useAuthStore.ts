@@ -32,6 +32,8 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   login: async (email: string, password: string) => {
+    // Always clear any stale session first to avoid "session already exists" → rate limit loop
+    try { await account.deleteSession('current') } catch { /* no active session, fine */ }
     const session = await account.createEmailPasswordSession(email, password)
     const profile = await databases.getDocument(DB_ID, PROFILES_ID, session.userId)
     set({

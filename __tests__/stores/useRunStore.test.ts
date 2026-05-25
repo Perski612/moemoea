@@ -90,3 +90,47 @@ describe('useRunStore.getWeeklyStats', () => {
     expect(stats.topSpeed).toBe(67)
   })
 })
+
+function makeRun(id: string, userId: string, username: string, tier: string, startedAt: string) {
+  return {
+    $id: id, userId, username, tier, startedAt,
+    sessionId: 's1', totalTime: 90, p1Time: null, p2Time: null,
+    maxAirtime: 2.1, maxSpeed: 60, maxGForce: 3.2,
+    distance: 1200, dataSource: 'phone', $createdAt: '',
+  }
+}
+
+describe('useRunStore.getActiveRiders', () => {
+  it('deduplicates by userId, keeps latest run per rider', async () => {
+    const now = new Date()
+    const recent = new Date(now.getTime() - 5 * 60 * 1000).toISOString()
+    const older  = new Date(now.getTime() - 10 * 60 * 1000).toISOString()
+
+    db.listDocuments.mockResolvedValueOnce({
+      total: 3,
+      documents: [
+        makeRun('r1', 'u1', 'Max',  'rookie',  recent),
+        makeRun('r2', 'u2', 'Lisa', 'veteran', older),
+        makeRun('r3', 'u1', 'Max',  'rookie',  older),
+      ],
+    } as any)
+
+    const { result } = renderHook(() => useRunStore())
+    let riders: any
+    await act(async () => { riders = await result.current.getActiveRiders() })
+
+    expect(riders).toHaveLength(2)
+    expect(riders.find((r: any) => r.userId === 'u1').lastRun.$id).toBe('r1')
+    expect(riders.find((r: any) => r.userId === 'u2').username).toBe('Lisa')
+  })
+
+  it('returns empty array when no recent runs', async () => {
+    db.listDocuments.mockResolvedValueOnce({ total: 0, documents: [] } as any)
+
+    const { result } = renderHook(() => useRunStore())
+    let riders: any
+    await act(async () => { riders = await result.current.getActiveRiders() })
+
+    expect(riders).toHaveLength(0)
+  })
+})

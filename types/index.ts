@@ -6,6 +6,7 @@ export interface Profile {
   username: string
   team: string
   xp: number
+  pendingXp: number
   level: number
   approved: boolean
   isAdmin: boolean
@@ -72,5 +73,43 @@ export interface ClipPost {
   verified: boolean
   fireCount: number
   firedBy: string[]
+  $createdAt: string
+}
+
+export interface ActiveRider {
+  userId: string
+  username: string
+  tier: Tier
+  lastRun: Run
+}
+
+export interface TrailRule {
+  $id: string
+  lineId: 'p1' | 'p2'
+  name: string
+  enabled: boolean
+  startLat: number
+  startLon: number
+  finishLat: number
+  finishLon: number
+  startRadiusM: number
+  finishRadiusM: number
+  minStartSpeedMs: number
+  directionToleranceDeg: number
+  testSamples: string
+  updatedBy: string
+  $createdAt: string
+}
+
+export type FeatureType = 'jump' | 'sender' | 'drop' | 'corner' | 'berm' | 'rock_garden'
+
+export interface TrailFeature {
+  $id: string
+  type: FeatureType
+  name: string
+  latitude: number
+  longitude: number
+  lineId: 'p1' | 'p2' | null
+  createdBy: string
   $createdAt: string
 }

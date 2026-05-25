@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import { ScrollView, View, Text, TouchableOpacity, StyleSheet, Modal } from 'react-native'
 import Svg, { Rect, Circle, Path, Polygon } from 'react-native-svg'
 import { AppHeader } from '@/components/ui/AppHeader'
+import { GlassBackground } from '@/components/ui/GlassBackground'
+import { GlassCard } from '@/components/ui/GlassCard'
 import { UserAvatar } from '@/components/UserAvatar'
 import { Colors, Fonts, Radius } from '@/constants/theme'
 import { useFeedStore } from '@/stores/useFeedStore'
@@ -149,8 +151,6 @@ function UploadModal({ visible, onClose }: { visible: boolean; onClose: () => vo
   )
 }
 
-// ── SCREEN ───────────────────────────────────────────────────────────────────
-
 export default function FeedScreen() {
   const { posts, getClipPosts, toggleFire } = useFeedStore()
   const { session } = useAuthStore()
@@ -168,7 +168,7 @@ export default function FeedScreen() {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: theme.bg }}>
+    <GlassBackground>
       <AppHeader />
       <UploadModal visible={uploadOpen} onClose={() => setUploadOpen(false)} />
       <ScrollView contentContainerStyle={{ paddingBottom: 110 }} showsVerticalScrollIndicator={false}>
@@ -176,29 +176,31 @@ export default function FeedScreen() {
         {/* Contest header */}
         <View style={s.contestHeader}>
           <View>
-            <Text style={s.eyebrow}>Style Contest</Text>
+            <Text style={[s.eyebrow, { color: accent }]}>Style Contest</Text>
             <Text style={[s.contestTitle, { color: theme.text }]}>{new Date().toLocaleDateString('de', { month: 'long', year: 'numeric' })}</Text>
             <Text style={[s.contestSub, { color: theme.muted }]}>MOE MOEA Trails · {posts.filter(p => p.verified).length} validierte Clips</Text>
           </View>
-          <View style={s.liveBadge}>
-            <Text style={s.liveBadgeText}>LIVE</Text>
+          <View style={[s.liveBadge, { backgroundColor: `${accent}18`, borderColor: `${accent}55` }]}>
+            <Text style={[s.liveBadgeText, { color: accent }]}>LIVE</Text>
           </View>
         </View>
 
         {/* Upload button */}
-        <TouchableOpacity style={s.uploadBtn} onPress={() => setUploadOpen(true)}>
-          <View style={s.uploadIcon}>
-            <Svg width={18} height={18} viewBox="0 0 18 18">
-              <Path d="M9 13V3M9 3L5 7M9 3l4 4" stroke={accent} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" fill="none" />
-              <Path d="M2 15h14" stroke={accent} strokeWidth={1.8} strokeLinecap="round" />
-            </Svg>
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={s.uploadTitle}>Video einreichen</Text>
-            <Text style={s.uploadSub}>QR scannen → aufnehmen → hochladen</Text>
-          </View>
-          <Text style={{ color: accent, fontSize: 12 }}>›</Text>
-        </TouchableOpacity>
+        <GlassCard style={[s.uploadBtn, { borderColor: accent }]} padding={14}>
+          <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }} onPress={() => setUploadOpen(true)}>
+            <View style={[s.uploadIcon, { backgroundColor: `${accent}1a`, borderColor: `${accent}44` }]}>
+              <Svg width={18} height={18} viewBox="0 0 18 18">
+                <Path d="M9 13V3M9 3L5 7M9 3l4 4" stroke={accent} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" fill="none" />
+                <Path d="M2 15h14" stroke={accent} strokeWidth={1.8} strokeLinecap="round" />
+              </Svg>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[s.uploadTitle, { color: theme.text }]}>Video einreichen</Text>
+              <Text style={[s.uploadSub, { color: theme.muted }]}>QR scannen → aufnehmen → hochladen</Text>
+            </View>
+            <Text style={{ color: accent, fontSize: 12 }}>›</Text>
+          </TouchableOpacity>
+        </GlassCard>
 
         {/* QR warning */}
         <View style={s.qrWarning}>
@@ -209,7 +211,7 @@ export default function FeedScreen() {
         {posts.map((post) => {
           const fired = session?.userId ? post.firedBy.includes(session.userId) : false
           return (
-            <View key={post.$id} style={s.feedCard}>
+            <GlassCard key={post.$id} style={s.feedCard} padding={0}>
               <VideoPlaceholder />
               {post.verified
                 ? <View style={[s.badge, { backgroundColor: `${accent}22`, borderColor: `${accent}77` }]}>
@@ -223,25 +225,25 @@ export default function FeedScreen() {
                 <UserAvatar userId={post.userId} size={34} />
                 <View style={{ flex: 1 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
-                    <Text style={s.feedUser}>{post.username}</Text>
+                    <Text style={[s.feedUser, { color: theme.text }]}>{post.username}</Text>
                     <TierDot tier={post.tier} />
                   </View>
-                  <Text style={s.feedBike}>{new Date(post.$createdAt).toLocaleDateString('de')}</Text>
+                  <Text style={[s.feedBike, { color: theme.muted }]}>{new Date(post.$createdAt).toLocaleDateString('de')}</Text>
                 </View>
                 <TouchableOpacity
-                  style={[s.fireBtn, fired && { backgroundColor: 'rgba(255,107,0,0.14)', borderColor: '#ff6b00' }]}
+                  style={[s.fireBtn, { borderColor: theme.cardBorder }, fired && { backgroundColor: 'rgba(255,107,0,0.14)', borderColor: '#ff6b00' }]}
                   onPress={() => toggle(post.$id)}
                 >
                   <Text style={{ fontSize: 11 }}>{fired ? '🔥' : '🤍'}</Text>
-                  <Text style={[s.fireCount, { color: fired ? '#ff6b00' : Colors.muted }]}>{post.fireCount}</Text>
+                  <Text style={[s.fireCount, { color: fired ? '#ff6b00' : theme.muted }]}>{post.fireCount}</Text>
                 </TouchableOpacity>
               </View>
-            </View>
+            </GlassCard>
           )
         })}
 
       </ScrollView>
-    </View>
+    </GlassBackground>
   )
 }
 
@@ -256,8 +258,7 @@ const s = StyleSheet.create({
   liveBadgeText: { fontFamily: Fonts.mono, fontSize: 11, color: Colors.accent },
 
   uploadBtn: {
-    marginHorizontal: 16, marginBottom: 16, borderWidth: 1, borderColor: Colors.accent,
-    borderRadius: 14, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12,
+    marginHorizontal: 16, marginBottom: 16,
   },
   uploadIcon: {
     width: 40, height: 40, borderRadius: 10, backgroundColor: `${Colors.accent}1a`,
@@ -273,8 +274,7 @@ const s = StyleSheet.create({
   qrWarningText: { fontFamily: Fonts.body, fontSize: 13, color: 'rgba(255,107,0,0.85)' },
 
   feedCard: {
-    marginHorizontal: 16, marginBottom: 14, borderWidth: 1, borderColor: 'rgba(255,255,255,0.07)',
-    borderRadius: 16, overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.025)',
+    marginHorizontal: 16, marginBottom: 14,
     position: 'relative',
   },
   badge: {

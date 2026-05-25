@@ -11,7 +11,10 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "de.moemoea.trails"
+      "bundleIdentifier": "de.moemoea.trails",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "MOE MOEA Trails nutzt deinen Standort, um Trail-Starts und Ziele zu erkennen."
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -21,7 +24,13 @@
     },
     "plugins": [
       "expo-router",
-      "expo-font"
+      "expo-font",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "MOE MOEA Trails nutzt deinen Standort, um Trail-Starts und Ziele zu erkennen."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

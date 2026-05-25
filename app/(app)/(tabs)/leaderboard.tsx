@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { ScrollView, View, Text, TouchableOpacity, StyleSheet } from 'react-native'
 import { AppHeader } from '@/components/ui/AppHeader'
+import { GlassBackground } from '@/components/ui/GlassBackground'
+import { GlassCard } from '@/components/ui/GlassCard'
 import { UserAvatar } from '@/components/UserAvatar'
 import { Fonts } from '@/constants/theme'
 import { useRunStore } from '@/stores/useRunStore'
@@ -39,7 +41,7 @@ export default function LeaderboardScreen() {
   const rest  = data.slice(3)
 
   return (
-    <View style={{ flex: 1, backgroundColor: theme.bg }}>
+    <GlassBackground>
       <AppHeader />
       <ScrollView contentContainerStyle={{ paddingBottom: 110 }} showsVerticalScrollIndicator={false}>
 
@@ -105,28 +107,27 @@ export default function LeaderboardScreen() {
         {/* Rest */}
         <View style={{ paddingHorizontal: 16 }}>
           {rest.map(e => (
-            <View key={e.rank} style={[s.row, {
-              backgroundColor: e.isMe ? `${accent}0f` : theme.cardBg,
-              borderColor: e.isMe ? `${accent}33` : theme.cardBorder,
-            }]}>
-              <Text style={[s.rowRank, { color: theme.dim }]}>#{e.rank}</Text>
-              <UserAvatar userId={e.userId} size={34} />
-              <View style={{ flex: 1 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <Text style={[s.rowName, { color: theme.text }, e.isMe && { fontFamily: Fonts.bodyBd }]}>{e.user}</Text>
-                  {e.isMe && <Text style={[s.iTag, { color: accent }]}>ICH</Text>}
+            <GlassCard key={e.rank} style={[s.row, e.isMe && { backgroundColor: `${accent}0f`, borderColor: `${accent}33` }]} padding={9}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                <Text style={[s.rowRank, { color: theme.dim }]}>#{e.rank}</Text>
+                <UserAvatar userId={e.userId} size={34} />
+                <View style={{ flex: 1 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Text style={[s.rowName, { color: theme.text }, e.isMe && { fontFamily: Fonts.bodyBd }]}>{e.user}</Text>
+                    {e.isMe && <Text style={[s.iTag, { color: accent }]}>ICH</Text>}
+                  </View>
+                  <Text style={[s.rowBike, { color: theme.muted }]}>{e.bike}</Text>
                 </View>
-                <Text style={[s.rowBike, { color: theme.muted }]}>{e.bike}</Text>
+                <Text style={[s.rowVal, { color: e.isMe ? accent : theme.text }]}>
+                  {e.value}<Text style={[s.rowUnit, { color: theme.muted }]}> {e.unit}</Text>
+                </Text>
               </View>
-              <Text style={[s.rowVal, { color: e.isMe ? accent : theme.text }]}>
-                {e.value}<Text style={[s.rowUnit, { color: theme.muted }]}> {e.unit}</Text>
-              </Text>
-            </View>
+            </GlassCard>
           ))}
         </View>
 
       </ScrollView>
-    </View>
+    </GlassBackground>
   )
 }
 
