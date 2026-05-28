@@ -1,0 +1,39 @@
+{
+  "expo": {
+    "name": "MOE MOEA Trails",
+    "slug": "moe-moea-trails",
+    "version": "1.0.0",
+    "scheme": "moemoeatrails",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "backgroundColor": "#0c0a07"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "de.moemoea.trails",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "MOE MOEA Trails nutzt deinen Standort, um Trail-Starts und Ziele zu erkennen."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#0c0a07"
+      },
+      "package": "de.moemoea.trails"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "MOE MOEA Trails nutzt deinen Standort, um Trail-Starts und Ziele zu erkennen."
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

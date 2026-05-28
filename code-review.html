@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MOE MOEA Trails — Code Review</title>
+<style>
+  :root {
+    --bg: #0f1115;
+    --bg-card: #181b22;
+    --bg-code: #11141a;
+    --border: #262b35;
+    --text: #e8e6e1;
+    --muted: #8b909c;
+    --accent: #99EA57;
+    --crit: #ff5c5c;
+    --high: #ff9f43;
+    --med: #ffd24a;
+    --low: #5cc8ff;
+    --ok: #99EA57;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.6;
+    font-size: 16px;
+  }
+  .wrap { max-width: 920px; margin: 0 auto; padding: 48px 24px 96px; }
+  header.page {
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 28px;
+    margin-bottom: 36px;
+  }
+  h1 {
+    font-size: 32px;
+    margin: 0 0 6px;
+    letter-spacing: 1px;
+  }
+  .sub { color: var(--muted); font-size: 14px; margin: 0; }
+  .meta {
+    display: flex; flex-wrap: wrap; gap: 20px;
+    margin-top: 18px; font-size: 13px; color: var(--muted);
+  }
+  .meta b { color: var(--text); font-weight: 600; }
+
+  .summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 12px;
+    margin: 28px 0 40px;
+  }
+  .stat {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    text-align: center;
+  }
+  .stat .n { font-size: 28px; font-weight: 700; line-height: 1; }
+  .stat .l { font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); margin-top: 8px; }
+
+  h2.section {
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--muted);
+    margin: 48px 0 18px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .issue {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-left-width: 4px;
+    border-radius: 10px;
+    padding: 22px 24px;
+    margin-bottom: 20px;
+  }
+  .issue.crit { border-left-color: var(--crit); }
+  .issue.high { border-left-color: var(--high); }
+  .issue.med  { border-left-color: var(--med); }
+  .issue.low  { border-left-color: var(--low); }
+  .issue.good { border-left-color: var(--ok); }
+
+  .issue h3 {
+    margin: 0 0 4px;
+    font-size: 19px;
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+  }
+  .tag {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 3px 8px;
+    border-radius: 5px;
+    white-space: nowrap;
+  }
+  .tag.crit { background: rgba(255,92,92,.15); color: var(--crit); }
+  .tag.high { background: rgba(255,159,67,.15); color: var(--high); }
+  .tag.med  { background: rgba(255,210,74,.15); color: var(--med); }
+  .tag.low  { background: rgba(92,200,255,.15); color: var(--low); }
+  .tag.good { background: rgba(153,234,87,.15); color: var(--ok); }
+
+  .loc { font-size: 12px; color: var(--muted); margin: 2px 0 14px; font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+  .loc code { color: var(--low); }
+
+  .issue p { margin: 10px 0; }
+  .label {
+    font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px;
+    color: var(--accent); font-weight: 700; margin-top: 16px; margin-bottom: 4px;
+  }
+
+  pre {
+    background: var(--bg-code);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+    overflow-x: auto;
+    font-size: 13px;
+    line-height: 1.5;
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  code.inl {
+    background: var(--bg-code);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 1px 6px;
+    font-size: 13px;
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    color: #d6c9ff;
+  }
+  .cmt { color: #6a7280; }
+  ul { margin: 10px 0; padding-left: 22px; }
+  li { margin: 6px 0; }
+  footer.page { margin-top: 56px; padding-top: 24px; border-top: 1px solid var(--border); color: var(--muted); font-size: 13px; }
+  a { color: var(--low); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="page">
+    <h1>MOE MOEA Trails — Code Review</h1>
+    <p class="sub">Expo / React Native (Expo Router v6, React 19) MTB trail-tracking app backed by Appwrite · ~7,500 LOC</p>
+    <div class="meta">
+      <span><b>Reviewed:</b> 2026-05-25</span>
+      <span><b>Stack:</b> Expo SDK 54, React 19, Zustand, React Query, Appwrite 25</span>
+      <span><b>Scope:</b> auth, stores, lib logic, backend setup scripts</span>
+    </div>
+  </header>
+
+  <div class="summary">
+    <div class="stat"><div class="n" style="color:var(--crit)">2</div><div class="l">Critical</div></div>
+    <div class="stat"><div class="n" style="color:var(--high)">2</div><div class="l">High</div></div>
+    <div class="stat"><div class="n" style="color:var(--med)">5</div><div class="l">Medium / Low</div></div>
+    <div class="stat"><div class="n" style="color:var(--ok)">4</div><div class="l">Strengths</div></div>
+  </div>
+
+  <p>The code is clean, well-organized, and the trail-detection state machine and XP math are genuinely well-built. The problems are concentrated in the <b>authorization model</b> — the Appwrite backend treats the client as trusted, and one misconfiguration is a directly exploitable privilege-escalation bug.</p>
+
+  <!-- ============ CRITICAL ============ -->
+  <h2 class="section">Critical</h2>
+
+  <div class="issue crit">
+    <h3><span class="tag crit">Critical</span> Privilege escalation: any user can self-approve and self-promote to admin</h3>
+    <div class="loc"><code>scripts/setup-backend-collections.js:163-177</code> · <code>stores/useProfileStore.ts</code> · <code>app/(auth)/register.tsx</code></div>
+
+    <p>The <code class="inl">profiles</code> collection is configured with <code class="inl">documentSecurity: false</code> <em>and</em> a collection-level <code class="inl">update("users")</code> permission:</p>
+    <pre>permissions.add('create("users")')
+permissions.add('read("any")')
+permissions.add('update("users")')      <span class="cmt">// ← every logged-in user can update…</span>
+permissions.add('update("team:admins")')
+// ...
+documentSecurity: false,                <span class="cmt">// …ANY document, ANY field</span></pre>
+
+    <p class="label">Why it's dangerous</p>
+    <p>Appwrite has no field-level permissions. <code class="inl">update</code> means "update any attribute of any document in the collection." Because <code class="inl">approved</code> and <code class="inl">isAdmin</code> live on the same profile document, any registered user — even one that hasn't been approved — can issue a single SDK call to:</p>
+    <ul>
+      <li>set their own <code class="inl">approved: true</code> → bypass the approval gate in <code class="inl">app/(app)/_layout.tsx:23</code></li>
+      <li>set their own <code class="inl">isAdmin: true</code> → unlock the admin panel</li>
+      <li>rewrite <b>any other user's</b> <code class="inl">xp</code>, <code class="inl">level</code>, <code class="inl">username</code>, or approval status</li>
+    </ul>
+    <p>The client already performs exactly these writes (<code class="inl">databases.updateDocument(DB_ID, PROFILES_ID, …)</code> in <code class="inl">useProfileStore.ts:51</code> and <code class="inl">admin/index.tsx:21</code>). An attacker simply calls the same function with a different document ID and payload.</p>
+
+    <p class="label">Recommended fix</p>
+    <ul>
+      <li>Set <code class="inl">profiles</code> to <code class="inl">documentSecurity: true</code>; grant each profile per-document <code class="inl">update(Role.user(id))</code> for the owner.</li>
+      <li>Move <code class="inl">approved</code> / <code class="inl">isAdmin</code> writes into a server-side Appwrite <b>Function</b> (API-key scoped), never reachable by the <code class="inl">users</code> role.</li>
+      <li>Restrict approval mutations to <code class="inl">team:admins</code> + the server function only.</li>
+    </ul>
+  </div>
+
+  <div class="issue crit">
+    <h3><span class="tag crit">Critical</span> XP and leaderboards are entirely client-trusted</h3>
+    <div class="loc"><code>stores/useProfileStore.ts:34-59</code> · <code>stores/useRunStore.ts:93-100</code></div>
+
+    <p>Even setting aside the permission bug, <code class="inl">addPendingXp</code> / <code class="inl">claimPendingXp</code> write <code class="inl">xp</code> and <code class="inl">level</code> directly from the client, and run metrics (<code class="inl">totalTime</code>, <code class="inl">maxAirtime</code>, <code class="inl">maxGForce</code>, …) are simply whatever the client posts:</p>
+    <pre>await databases.updateDocument(DB_ID, PROFILES_ID, profile.$id, {
+  xp: newXp, level: newLevel, pendingXp: 0,   <span class="cmt">// client decides its own XP</span>
+})</pre>
+
+    <p class="label">Why it's dangerous</p>
+    <p>Any user can fabricate a run with a 50 G impact and a 0-second time, or write an arbitrary XP value, and top every leaderboard. The logic in <code class="inl">lib/xp.ts</code> looks authoritative but runs only on the device, so it provides no integrity guarantee.</p>
+
+    <p class="label">Recommended fix</p>
+    <ul>
+      <li>If leaderboard integrity matters: compute XP and validate run metrics server-side (Appwrite Function reusing <code class="inl">lib/xp.ts</code>), and make <code class="inl">xp</code> / <code class="inl">level</code> / run metrics non-writable by the client.</li>
+      <li>If it doesn't (friends-only app): that's a legitimate choice — but document it, because the current code reads as if it's enforcing rules it can't enforce.</li>
+    </ul>
+  </div>
+
+  <!-- ============ HIGH ============ -->
+  <h2 class="section">High</h2>
+
+  <div class="issue high">
+    <h3><span class="tag high">High</span> The "fire" / like feature is broken for everyone but the post author</h3>
+    <div class="loc"><code>stores/useFeedStore.ts:31,46</code> · <code>scripts/setup-backend-collections.js:266</code></div>
+
+    <p>Clip posts are created with <code class="inl">documentSecurity: true</code> and write granted only to the author (<code class="inl">Permission.write(Role.user(data.userId))</code>), and the <code class="inl">clip_posts</code> collection itself only has <code class="inl">create("users")</code> + <code class="inl">read("any")</code>. But <code class="inl">toggleFire</code> updates <code class="inl">fireCount</code> / <code class="inl">firedBy</code> on <em>another user's</em> post:</p>
+    <pre>await databases.updateDocument(DB_ID, CLIP_POSTS_ID, postId, {
+  fireCount: newCount, firedBy: newFiredBy,   <span class="cmt">// rejected unless you own the post</span>
+})</pre>
+
+    <p class="label">Why it's a problem</p>
+    <ul>
+      <li><b>Functional:</b> the write is denied for everyone except the post owner, so likes don't work for their intended purpose.</li>
+      <li><b>Race condition:</b> <code class="inl">toggleFire</code> reads <code class="inl">fireCount</code>, modifies it locally, and writes it back. Two simultaneous fires clobber each other — the count drifts.</li>
+    </ul>
+    <p class="label">Recommended fix</p>
+    <p>Handle fires in a server-side Function (lets non-owners increment safely) or use an atomic increment if your Appwrite version supports <code class="inl">incrementDocumentAttribute</code>. Store the per-user fire relationship in a separate collection rather than mutating the post's array.</p>
+  </div>
+
+  <div class="issue high">
+    <h3><span class="tag high">High</span> Admin route is not guarded — only the button is hidden</h3>
+    <div class="loc"><code>app/(app)/admin/index.tsx</code> · <code>app/(app)/(tabs)/profile.tsx:320</code> · <code>app/(app)/_layout.tsx</code></div>
+
+    <p>The "Admin" entry point is conditionally rendered behind <code class="inl">isAdmin</code> in the profile UI, but the route file <code class="inl">app/(app)/admin/index.tsx</code> has no <code class="inl">isAdmin</code> redirect. The only gate is the group layout's session + approved check, so a non-admin can deep-link straight to the admin screen.</p>
+    <p class="label">Why it's a problem</p>
+    <p>Defense in depth is missing on the client, and — combined with the Critical permission bug above — the approve action a non-admin triggers there actually succeeds server-side.</p>
+    <p class="label">Recommended fix</p>
+    <p>Add an <code class="inl">isAdmin</code> redirect guard at the route, and (more importantly) enforce admin-only mutations server-side. UI hiding is not a security control.</p>
+  </div>
+
+  <!-- ============ MEDIUM / LOW ============ -->
+  <h2 class="section">Medium / Low</h2>
+
+  <div class="issue med">
+    <h3><span class="tag med">Medium</span> <code class="inl">react-native-maps</code> has no web support, but a web target ships</h3>
+    <div class="loc"><code>package.json</code> · <code>app/(app)/(tabs)/strecke.tsx</code></div>
+    <p><code class="inl">react-native-maps</code> 1.20.1 does not support web, yet <code class="inl">package.json</code> defines a <code class="inl">web</code> script and Expo Router renders all routes. The <code class="inl">strecke</code> (map) tab will likely crash or fail to render on web. Confirm which platforms are actually targeted; if web is in scope, gate the map behind a platform check or a web-compatible map.</p>
+  </div>
+
+  <div class="issue low">
+    <h3><span class="tag low">Low</span> Hardcoded fallback Appwrite project ID in a committed script</h3>
+    <div class="loc"><code>scripts/create-admin-user.js:17</code></div>
+    <p>A real project ID (<code class="inl">'6a032a7a...'</code>) is baked in as a fallback. Project IDs aren't secret (they ship in <code class="inl">EXPO_PUBLIC_*</code> anyway), so the risk is low — but hardcoding a live instance ID is sloppy and invites copy-paste mistakes. Prefer requiring it from env. <b>Good:</b> <code class="inl">.mcp.json</code> and <code class="inl">.env.local</code> (which hold API keys) are correctly gitignored.</p>
+  </div>
+
+  <div class="issue low">
+    <h3><span class="tag low">Low</span> Auth bypass flags can silently ship an open app</h3>
+    <div class="loc"><code>app/(app)/_layout.tsx:7,20</code></div>
+    <p><code class="inl">SKIP_AUTH_FOR_SENSOR_TEST</code> and <code class="inl">IS_DEMO</code> render the whole app with no auth. <code class="inl">IS_DEMO</code> is <code class="inl">!process.env.EXPO_PUBLIC_APPWRITE_ENDPOINT</code> — it triggers whenever that env var is unset. Make sure production builds always set the endpoint, or a misconfigured build ships with authentication disabled.</p>
+  </div>
+
+  <div class="issue low">
+    <h3><span class="tag low">Low</span> Leaderboard queries fetch a fixed 200-row window then sort client-side</h3>
+    <div class="loc"><code>stores/useRunStore.ts:188-201, 122-138, 157-177</code></div>
+    <p><code class="inl">getLeaderboard</code>, <code class="inl">getWeeklyRanking</code>, and <code class="inl">getPersonalBests</code> pull <code class="inl">Query.limit(200)</code> and then dedupe / compute "best per user" in JS. Fine at small scale, but once the <code class="inl">runs</code> collection exceeds 200 rows in the window, entries are silently dropped and the "best" can be wrong. Plan to paginate or push aggregation server-side as data grows.</p>
+  </div>
+
+  <div class="issue low">
+    <h3><span class="tag low">Low</span> Pervasive <code class="inl">as unknown as T</code> casts defeat type safety</h3>
+    <div class="loc"><code>stores/useAuthStore.ts:26-27</code> and most store files</div>
+    <p>Appwrite returns <code class="inl">Models.Document</code>; the code casts straight to domain types (<code class="inl">as unknown as Run</code>, <code class="inl">as boolean</code>) everywhere. A schema drift would surface as a runtime <code class="inl">undefined</code> rather than a compile error. Consider a small typed mapper layer per collection so the boundary is validated once.</p>
+  </div>
+
+  <!-- ============ STRENGTHS ============ -->
+  <h2 class="section">Strengths</h2>
+
+  <div class="issue good">
+    <h3><span class="tag good">Good</span> Clean, testable trail-detection state machine</h3>
+    <div class="loc"><code>lib/trailDetection.ts</code></div>
+    <p>A pure, well-factored state machine (haversine distance + bearing + confidence scoring), fully decoupled from React and data fetching — easy to test and reason about.</p>
+  </div>
+
+  <div class="issue good">
+    <h3><span class="tag good">Good</span> Correct, transparent XP math</h3>
+    <div class="loc"><code>lib/xp.ts</code></div>
+    <p>The level curve and its closed-form inverse are consistent at the boundaries, and <code class="inl">calculateRunXp</code> returns a clear breakdown (base / sensor / pb / daily). The logic itself is solid — it just needs to run server-side (see Critical #2).</p>
+  </div>
+
+  <div class="issue good">
+    <h3><span class="tag good">Good</span> Sensible test coverage and tooling</h3>
+    <div class="loc"><code>__tests__/</code> · <code>package.json</code></div>
+    <p>Pure logic and stores are covered with Jest + Testing Library, and the Jest/Expo config is correct (including the <code class="inl">react-native-svg</code> mock and appropriate <code class="inl">transformIgnorePatterns</code>).</p>
+  </div>
+
+  <div class="issue good">
+    <h3><span class="tag good">Good</span> Thoughtful auth ergonomics</h3>
+    <div class="loc"><code>stores/useAuthStore.ts:36</code></div>
+    <p>Login proactively clears any stale session before creating a new one, avoiding the Appwrite "session already exists" → rate-limit loop. Consistent theming and structure throughout.</p>
+  </div>
+
+  <footer class="page">
+    <p><b>Bottom line:</b> architecturally solid and pleasant to read, but the Appwrite permission model trusts the client. The <code class="inl">profiles</code> <code class="inl">documentSecurity: false</code> + <code class="inl">update("users")</code> combination (Critical #1) is a real, exploitable auth bypass and should be fixed before any real users touch the app. The fire feature (High #1) is currently non-functional for its intended use.</p>
+    <p>Generated by Claude Code · 2026-05-25</p>
+  </footer>
+
+</div>
+</body>
+</html>

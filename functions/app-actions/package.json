@@ -1,0 +1,13 @@
+{
+  "name": "moe-moea-app-actions",
+  "version": "1.0.0",
+  "description": "Privileged server-side actions for MOE MOEA Trails (profile init, approval, XP, fires)",
+  "type": "module",
+  "main": "src/main.js",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "node-appwrite": "^14.0.0"
+  }
+}
