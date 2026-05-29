@@ -436,7 +436,7 @@ export default function DashboardScreen() {
         </TouchableOpacity>
 
         {/* Trail Map Widget */}
-        <TrailMapWidget onPress={() => router.push('/(app)/(tabs)/strecke')} />
+        <TrailMapWidget accent={accent} onPress={() => router.push('/(app)/(tabs)/strecke')} />
 
         {/* Wochenziele */}
         <Text style={[s.sectionLabel, { color: accent }]}>Wochenziele</Text>
