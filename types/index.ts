@@ -79,6 +79,8 @@ export interface ClipPost {
   verified: boolean
   fireCount: number
   firedBy: string[]
+  videoUrl?: string
+  reactions?: string  // JSON: Record<emoji, userId[]>
   $createdAt: string
 }
 

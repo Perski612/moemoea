@@ -30,7 +30,8 @@
         {
           "locationWhenInUsePermission": "MOE MOEA Trails nutzt deinen Standort, um Trail-Starts und Ziele zu erkennen."
         }
-      ]
+      ],
+      "expo-video"
     ],
     "experiments": {
       "typedRoutes": true

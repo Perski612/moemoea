@@ -207,6 +207,66 @@ async function purchaseItem(databases, callerId, payload) {
   return { coins: newCoins, ownedParts: newOwned }
 }
 
+async function createClipPost(databases, callerId, payload) {
+  const videoUrl = String(payload.videoUrl ?? '')
+  if (!videoUrl) throw new Error('videoUrl required')
+
+  const profile = await databases.getDocument(DB_ID, PROFILES_ID, callerId)
+  const contestMonth = new Date().toISOString().slice(0, 7)
+
+  const post = await databases.createDocument(
+    DB_ID, CLIP_POSTS_ID, ID.unique(),
+    {
+      userId: callerId,
+      username: profile.username,
+      tier: profile.tier ?? 'rookie',
+      runId: payload.runId ?? null,
+      contestMonth,
+      verified: false,
+      fireCount: 0,
+      firedBy: [],
+      videoUrl,
+    },
+    [Permission.read(Role.any()), Permission.write(Role.user(callerId))],
+  )
+  return { post }
+}
+
+async function deleteClipPost(databases, callerId, payload) {
+  const postId = String(payload.postId ?? '')
+  if (!postId) throw new Error('postId required')
+
+  const post = await databases.getDocument(DB_ID, CLIP_POSTS_ID, postId)
+  if (post.userId !== callerId) throw new Error('not authorized')
+
+  await databases.deleteDocument(DB_ID, CLIP_POSTS_ID, postId)
+  return { deleted: postId }
+}
+
+async function reactToClip(databases, callerId, payload) {
+  const postId = String(payload.postId ?? '')
+  const emoji  = String(payload.emoji  ?? '')
+  if (!postId || !emoji) throw new Error('postId and emoji required')
+
+  const post = await databases.getDocument(DB_ID, CLIP_POSTS_ID, postId)
+  let reactions = {}
+  try { reactions = JSON.parse(post.reactions || '{}') } catch {}
+
+  const users = reactions[emoji] ?? []
+  if (users.includes(callerId)) {
+    const next = users.filter(id => id !== callerId)
+    if (next.length) reactions[emoji] = next
+    else delete reactions[emoji]
+  } else {
+    reactions[emoji] = [...users, callerId]
+  }
+
+  await databases.updateDocument(DB_ID, CLIP_POSTS_ID, postId, {
+    reactions: JSON.stringify(reactions),
+  })
+  return { reactions }
+}
+
 async function toggleFire(databases, callerId, payload) {
   const postId = String(payload.postId ?? '')
   if (!postId) throw new Error('postId required')
@@ -269,8 +329,14 @@ export default async ({ req, res, error }) => {
         return res.json({ ok: true, ...(await addPendingXp(databases, callerId, payload)) })
       case 'claimXp':
         return res.json({ ok: true, ...(await claimXp(databases, callerId)) })
+      case 'deleteClipPost':
+        return res.json({ ok: true, ...(await deleteClipPost(databases, callerId, payload)) })
+      case 'reactToClip':
+        return res.json({ ok: true, ...(await reactToClip(databases, callerId, payload)) })
       case 'toggleFire':
         return res.json({ ok: true, ...(await toggleFire(databases, callerId, payload)) })
+      case 'createClipPost':
+        return res.json({ ok: true, ...(await createClipPost(databases, callerId, payload)) })
       case 'purchaseItem':
         return res.json({ ok: true, ...(await purchaseItem(databases, callerId, payload)) })
       default:

@@ -15,6 +15,7 @@ import type { Tier } from '@/types'
 import { LiveTrailWidget } from '@/components/LiveTrailWidget'
 import { XpBar } from '@/components/XpBar'
 import { RankUpModal } from '@/components/RankUpModal'
+import { LevelUpToast } from '@/components/LevelUpToast'
 import type { ActiveRider } from '@/types'
 import type { EmblemDef } from '@/lib/emblems'
 
@@ -323,6 +324,7 @@ export default function DashboardScreen() {
   const [showAllSessions, setShowAllSessions] = useState(false)
   const [isFocused, setIsFocused] = useState(false)
   const [rankUpData, setRankUpData] = useState<{ newEmblem: EmblemDef; oldEmblem: EmblemDef } | null>(null)
+  const [levelUpLevel, setLevelUpLevel] = useState<number | null>(null)
   const userId = session?.userId
 
   const loadDashboard = useCallback(() => {
@@ -411,6 +413,7 @@ export default function DashboardScreen() {
           <XpBar
             accent={accent}
             isFocused={isFocused}
+            onLevelUp={(newLevel) => { setLevelUpLevel(newLevel); setTimeout(() => setLevelUpLevel(null), 3000) }}
             onRankUp={(newEmblem, oldEmblem) => setRankUpData({ newEmblem, oldEmblem })}
           />
         </View>
@@ -454,6 +457,7 @@ export default function DashboardScreen() {
           </TouchableOpacity>
         )}
       </ScrollView>
+      <LevelUpToast newLevel={levelUpLevel} accent={accent} />
       <RankUpModal
         visible={rankUpData != null}
         newEmblem={rankUpData?.newEmblem ?? null}
