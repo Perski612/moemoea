@@ -13,6 +13,7 @@ import { useProfileStore } from '@/stores/useProfileStore'
 import { useTheme, Theme } from '@/hooks/useTheme'
 import type { Tier } from '@/types'
 import { LiveTrailWidget } from '@/components/LiveTrailWidget'
+import { TrailMapWidget } from '@/components/TrailMapWidget'
 import { XpBar } from '@/components/XpBar'
 import { RankUpModal } from '@/components/RankUpModal'
 import { LevelUpToast } from '@/components/LevelUpToast'
@@ -326,8 +327,8 @@ export default function DashboardScreen() {
   useEffect(() => {
     const loop = Animated.loop(
       Animated.sequence([
-        Animated.timing(pulseAnim, { toValue: 2.2, duration: 1000, useNativeDriver: true }),
-        Animated.timing(pulseAnim, { toValue: 1,   duration: 1000, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 0.15, duration: 850, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1,    duration: 850, useNativeDriver: true }),
       ])
     )
     loop.start()
@@ -417,33 +418,25 @@ export default function DashboardScreen() {
           />
         </View>
 
-        {/* Quick Actions — REC + Strecke */}
-        <View style={s.actionRow}>
-          <TouchableOpacity
-            onPress={() => router.push('/(app)/(tabs)/sensor')}
-            style={[s.recCard, { borderColor: accent, backgroundColor: `${accent}12` }]}
-            activeOpacity={0.8}
-          >
-            <View style={s.recPulseWrap}>
-              <Animated.View style={[s.recPulseRing, { backgroundColor: accent, transform: [{ scale: pulseAnim }] }]} />
-              <View style={[s.recDotLarge, { backgroundColor: accent }]} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={[s.recCardLabel, { color: accent }]}>REC</Text>
-              <Text style={[s.recCardSub, { color: theme.muted }]}>Run aufzeichnen</Text>
-            </View>
-          </TouchableOpacity>
+        {/* REC — Primäre Aktion */}
+        <TouchableOpacity
+          onPress={() => router.push('/(app)/(tabs)/sensor')}
+          style={[s.recCard, { borderColor: accent, backgroundColor: `${accent}12` }]}
+          activeOpacity={0.8}
+        >
+          <View style={s.recPulseWrap}>
+            <Animated.View style={[s.recPulseRing, { backgroundColor: accent, opacity: pulseAnim }]} />
+            <View style={[s.recDotLarge, { backgroundColor: accent }]} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={[s.recCardLabel, { color: accent }]}>REC</Text>
+            <Text style={[s.recCardSub, { color: theme.muted }]}>Run aufzeichnen</Text>
+          </View>
+          <Text style={{ fontFamily: Fonts.mono, fontSize: 16, color: accent }}>›</Text>
+        </TouchableOpacity>
 
-          <TouchableOpacity
-            onPress={() => router.push('/(app)/(tabs)/strecke')}
-            style={[s.streckeCard, { borderColor: theme.cardBorder, backgroundColor: theme.cardBg }]}
-            activeOpacity={0.8}
-          >
-            <Text style={[s.streckeCardIcon, { color: theme.muted }]}>⬡</Text>
-            <Text style={[s.streckeCardLabel, { color: theme.text }]}>STRECKE</Text>
-            <Text style={[s.streckeCardSub, { color: theme.muted }]}>Karte & Zeiten</Text>
-          </TouchableOpacity>
-        </View>
+        {/* Trail Map Widget */}
+        <TrailMapWidget onPress={() => router.push('/(app)/(tabs)/strecke')} />
 
         {/* Wochenziele */}
         <Text style={[s.sectionLabel, { color: accent }]}>Wochenziele</Text>
@@ -503,31 +496,21 @@ const s = StyleSheet.create({
   username: { fontFamily: Fonts.bodyBd, fontSize: 20, fontWeight: '700' },
   bikeTypeInline: { fontFamily: Fonts.mono, fontSize: 13, fontWeight: '700', letterSpacing: 1.5 },
   teamText: { fontFamily: Fonts.body, fontSize: 13, marginTop: 2 },
-  actionRow: {
-    flexDirection: 'row', gap: 10, marginBottom: 20,
-  },
   recCard: {
-    flex: 3, flexDirection: 'row', alignItems: 'center', gap: 12,
+    flexDirection: 'row', alignItems: 'center', gap: 12,
     borderWidth: 1.5, borderRadius: 14,
-    paddingHorizontal: 14, paddingVertical: 13,
+    paddingHorizontal: 14, paddingVertical: 12,
+    marginBottom: 12,
   },
   recPulseWrap: {
     width: 34, height: 34, alignItems: 'center', justifyContent: 'center',
   },
   recPulseRing: {
-    position: 'absolute', width: 34, height: 34, borderRadius: 17, opacity: 0.18,
+    position: 'absolute', width: 26, height: 26, borderRadius: 13,
   },
   recDotLarge: { width: 13, height: 13, borderRadius: 7 },
   recCardLabel: { fontFamily: Fonts.mono, fontSize: 20, fontWeight: '700', letterSpacing: 3, lineHeight: 24 },
   recCardSub: { fontFamily: Fonts.body, fontSize: 12, marginTop: 1 },
-  streckeCard: {
-    flex: 2, borderWidth: 1, borderRadius: 14,
-    paddingHorizontal: 14, paddingVertical: 13,
-    justifyContent: 'center', gap: 2,
-  },
-  streckeCardIcon: { fontFamily: Fonts.mono, fontSize: 18, marginBottom: 2 },
-  streckeCardLabel: { fontFamily: Fonts.mono, fontSize: 14, fontWeight: '700', letterSpacing: 2 },
-  streckeCardSub: { fontFamily: Fonts.body, fontSize: 11 },
   levelBadge: { borderWidth: 1, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 4 },
   levelText: { fontFamily: Fonts.mono, fontSize: 13, fontWeight: '700' },
   levelName: { fontFamily: Fonts.bodyBd, fontSize: 16 },
