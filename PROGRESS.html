@@ -5,206 +5,314 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>MOE MOEA Trails — Progress & To-Do</title>
 <style>
+  :root {
+    --bg:       #09090b;
+    --bg-card:  #111114;
+    --border:   #1e1f26;
+    --text:     #e8e6e1;
+    --muted:    #5a5c6a;
+    --accent:   #99EA57;
+    --done:     #99EA57;
+    --bug:      #ff5c5c;
+    --todo:     #5cb8ff;
+    --idea:     #b07fff;
+    --wip:      #fbbf24;
+  }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
-    font-family: 'Segoe UI', system-ui, sans-serif;
-    background: #0d0f14;
-    color: #c8cdd8;
-    padding: 32px 24px 80px;
-    max-width: 900px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding: 40px 24px 100px;
+    max-width: 920px;
     margin: 0 auto;
     line-height: 1.6;
   }
 
+  /* ── Header ── */
+  header {
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 28px;
+    margin-bottom: 36px;
+  }
   h1 {
-    font-size: 28px;
-    font-weight: 800;
+    font-size: 30px;
+    font-weight: 900;
     color: #fff;
-    letter-spacing: 2px;
+    letter-spacing: 3px;
     text-transform: uppercase;
     margin-bottom: 4px;
   }
   .subtitle {
-    color: #556;
-    font-size: 13px;
-    letter-spacing: 1px;
-    margin-bottom: 40px;
     font-family: 'Courier New', monospace;
-  }
-
-  h2 {
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 3px;
+    font-size: 12px;
+    color: var(--muted);
+    letter-spacing: 2px;
     text-transform: uppercase;
-    color: #556;
-    margin-bottom: 14px;
-    margin-top: 40px;
-    padding-bottom: 6px;
-    border-bottom: 1px solid #1e2130;
+  }
+  .accent-dot {
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    margin-right: 8px;
+    vertical-align: middle;
   }
 
-  .section { margin-bottom: 8px; }
+  /* ── Stats ── */
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin-bottom: 44px;
+  }
+  .stat-box {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 12px;
+    text-align: center;
+  }
+  .stat-num {
+    font-size: 32px;
+    font-weight: 900;
+    line-height: 1;
+    margin-bottom: 6px;
+  }
+  .stat-label {
+    font-size: 9px;
+    letter-spacing: 2.5px;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+  .c-done  { color: var(--done); }
+  .c-bug   { color: var(--bug); }
+  .c-todo  { color: var(--todo); }
+  .c-idea  { color: var(--idea); }
 
-  /* Card */
+  /* ── Section heading ── */
+  h2 {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 3.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 12px;
+    margin-top: 44px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* ── Card ── */
   .card {
-    background: #13161f;
-    border: 1px solid #1e2130;
-    border-radius: 10px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
     padding: 14px 18px;
     margin-bottom: 8px;
     display: flex;
     gap: 14px;
     align-items: flex-start;
   }
-  .card.done   { border-left: 3px solid #4ade80; }
-  .card.issue  { border-left: 3px solid #f87171; }
-  .card.todo   { border-left: 3px solid #3b82f6; }
-  .card.idea   { border-left: 3px solid #a78bfa; }
-  .card.wip    { border-left: 3px solid #fbbf24; }
+  .card.done  { border-left: 3px solid var(--done); }
+  .card.bug   { border-left: 3px solid var(--bug); }
+  .card.todo  { border-left: 3px solid var(--todo); }
+  .card.idea  { border-left: 3px solid var(--idea); }
+  .card.wip   { border-left: 3px solid var(--wip); }
 
+  /* ── Badge ── */
   .badge {
     font-size: 9px;
     font-weight: 700;
     letter-spacing: 1.5px;
     text-transform: uppercase;
-    padding: 3px 8px;
-    border-radius: 4px;
+    padding: 3px 9px;
+    border-radius: 5px;
     white-space: nowrap;
     flex-shrink: 0;
     margin-top: 2px;
   }
-  .badge.done  { background: #052e16; color: #4ade80; }
-  .badge.issue { background: #2a0a0a; color: #f87171; }
-  .badge.todo  { background: #0c1a3a; color: #60a5fa; }
-  .badge.idea  { background: #1e1030; color: #c4b5fd; }
-  .badge.wip   { background: #2a1a00; color: #fbbf24; }
+  .badge.done { background: rgba(153,234,87,0.1);  color: var(--done); }
+  .badge.bug  { background: rgba(255,92,92,0.1);   color: var(--bug);  }
+  .badge.todo { background: rgba(92,184,255,0.1);  color: var(--todo); }
+  .badge.idea { background: rgba(176,127,255,0.1); color: var(--idea); }
+  .badge.wip  { background: rgba(251,191,36,0.1);  color: var(--wip);  }
 
+  /* ── Card content ── */
   .card-title {
     font-size: 14px;
-    font-weight: 600;
-    color: #e8eaf0;
-    margin-bottom: 3px;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 4px;
+    letter-spacing: 0.2px;
   }
   .card-body {
     font-size: 12px;
     color: #6b7280;
-    line-height: 1.5;
+    line-height: 1.6;
   }
   .card-body code {
     font-family: 'Courier New', monospace;
-    background: #1c2030;
-    padding: 1px 5px;
-    border-radius: 3px;
+    background: #18191f;
+    padding: 1px 6px;
+    border-radius: 4px;
     font-size: 11px;
     color: #94a3b8;
   }
-  .card-body ul {
-    margin-top: 6px;
-    padding-left: 16px;
-  }
+  .card-body ul { margin-top: 6px; padding-left: 16px; }
   .card-body li { margin-bottom: 3px; }
 
+  /* ── Tags ── */
+  .tags { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 4px; }
   .tag {
     display: inline-block;
     font-size: 9px;
     letter-spacing: 1px;
-    padding: 2px 7px;
-    border-radius: 3px;
-    background: #1c2030;
-    color: #475569;
-    margin-right: 4px;
-    margin-top: 6px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    background: #18191f;
+    color: #3a3d50;
     text-transform: uppercase;
+    border: 1px solid #1e1f26;
   }
 
-  .priority-high { color: #f87171 !important; }
-  .priority-med  { color: #fbbf24 !important; }
-  .priority-low  { color: #4ade80 !important; }
+  /* ── Tech Stack ── */
+  .stack { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip {
+    font-size: 11px;
+    padding: 5px 12px;
+    border-radius: 6px;
+    border: 1px solid transparent;
+  }
+  .chip.green  { background: rgba(153,234,87,0.08); border-color: rgba(153,234,87,0.2); color: var(--done); }
+  .chip.blue   { background: rgba(92,184,255,0.08); border-color: rgba(92,184,255,0.2); color: var(--todo); }
+  .chip.purple { background: rgba(176,127,255,0.08);border-color: rgba(176,127,255,0.2);color: var(--idea); }
+  .chip.yellow { background: rgba(251,191,36,0.08); border-color: rgba(251,191,36,0.2); color: var(--wip);  }
+  .chip.grey   { background: #18191f; border-color: var(--border); color: #6b7280; }
 
-  /* Stats row */
-  .stats {
-    display: flex;
-    gap: 12px;
-    margin-bottom: 36px;
-    flex-wrap: wrap;
+  /* ── Scripts ── */
+  .scripts {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 20px;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    line-height: 2.2;
+    color: #6b7280;
   }
-  .stat-box {
-    background: #13161f;
-    border: 1px solid #1e2130;
-    border-radius: 8px;
-    padding: 14px 20px;
-    text-align: center;
-    flex: 1;
-    min-width: 100px;
-  }
-  .stat-num {
-    font-size: 28px;
-    font-weight: 800;
-    color: #fff;
-    line-height: 1;
-    margin-bottom: 4px;
-  }
-  .stat-label {
-    font-size: 9px;
-    letter-spacing: 2px;
-    color: #3b4255;
-    text-transform: uppercase;
-  }
-  .stat-num.green { color: #4ade80; }
-  .stat-num.red   { color: #f87171; }
-  .stat-num.blue  { color: #60a5fa; }
-  .stat-num.yellow{ color: #fbbf24; }
+  .scripts code { color: var(--accent); }
 
-  a { color: #60a5fa; text-decoration: none; }
-  a:hover { text-decoration: underline; }
-
+  /* ── Footer ── */
   .updated {
     font-size: 11px;
-    color: #2a3040;
+    color: #252730;
     font-family: 'Courier New', monospace;
-    margin-top: 48px;
+    margin-top: 60px;
     text-align: center;
+    letter-spacing: 1px;
   }
+
+  a { color: var(--todo); text-decoration: none; }
+  a:hover { text-decoration: underline; }
 </style>
 </head>
 <body>
 
-<h1>MOE MOEA Trails</h1>
-<p class="subtitle">PROGRESS · TO-DO · KNOWN ISSUES — Stand: Mai 2026</p>
+<header>
+  <h1><span class="accent-dot"></span>MOE MOEA Trails</h1>
+  <p class="subtitle">Progress · To-Do · Known Issues — Stand: Mai 2026</p>
+</header>
 
 <!-- Stats -->
 <div class="stats">
   <div class="stat-box">
-    <div class="stat-num green">18</div>
+    <div class="stat-num c-done">22</div>
     <div class="stat-label">Erledigt</div>
   </div>
   <div class="stat-box">
-    <div class="stat-num red">3</div>
+    <div class="stat-num c-bug">3</div>
     <div class="stat-label">Bugs / Issues</div>
   </div>
   <div class="stat-box">
-    <div class="stat-num blue">11</div>
+    <div class="stat-num c-todo">9</div>
     <div class="stat-label">To-Do</div>
   </div>
   <div class="stat-box">
-    <div class="stat-num yellow">4</div>
+    <div class="stat-num c-idea">4</div>
     <div class="stat-label">Ideen</div>
   </div>
 </div>
 
 
-<!-- ═══════════════════════════════════════════════ DONE ═══ -->
+<!-- ══════════════════════════════════════════════════════ DONE ══ -->
 <h2>Erledigt</h2>
+
+<div class="card done">
+  <span class="badge done">Done</span>
+  <div>
+    <div class="card-title">Video Feed — Upload, Player, Reaktionen, Löschen</div>
+    <div class="card-body">
+      Vollständige Video-Funktion im Feed-Tab:
+      <ul>
+        <li>Upload via <strong>Cloudinary</strong> (unsigned preset, REST API — kein nativer Code, Expo Go kompatibel)</li>
+        <li>Feed zeigt Cloudinary-Thumbnail (<code>so_0,w_800,h_450,c_fill</code>) mit Play-Overlay</li>
+        <li>Tap öffnet Fullscreen-Modal mit nativen Video-Controls (<code>expo-video</code>)</li>
+        <li>Vollbild-Panel: Uploader-Avatar, Username, Upload-Datum</li>
+        <li>6 Emoji-Reaktionen (🔥💯🤙😮🫡👏) mit schwebendem Animations-Feedback</li>
+        <li>Eigene Clips löschbar (Mülleimer-Button, Bestätigungs-Dialog)</li>
+      </ul>
+      Server Actions: <code>createClipPost</code>, <code>reactToClip</code>, <code>deleteClipPost</code>
+      <div class="tags"><span class="tag">Feed</span><span class="tag">Video</span><span class="tag">Cloudinary</span><span class="tag">Social</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="card done">
+  <span class="badge done">Done</span>
+  <div>
+    <div class="card-title">LevelUp Toast Animation</div>
+    <div class="card-body">
+      Animierter Toast schiebt sich von oben rein bei Level-Up während XP-Claim.
+      Zeigt Level-Zahl + Emblem-Name mit Shimmer-Effekt, verschwindet nach 2.4s.
+      Verdrahtet an <code>XpBar → onLevelUp</code> auf dem Dashboard.
+      <div class="tags"><span class="tag">UI</span><span class="tag">Animation</span><span class="tag">XP</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="card done">
+  <span class="badge done">Done</span>
+  <div>
+    <div class="card-title">RockShox Parts im Shop</div>
+    <div class="card-body">
+      4 neue RockShox-Gabeln im Händler: Pike Red, Pike Silver, Pike Black, Zeb Red.
+      Pixel-Art-Sprites, Preise in <code>ITEM_PRICES</code>, Icons im Shop.
+      <div class="tags"><span class="tag">Shop</span><span class="tag">Content</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="card done">
+  <span class="badge done">Done</span>
+  <div>
+    <div class="card-title">Onboarding-Flow für neue User</div>
+    <div class="card-body">
+      Nach Registrierung: Username wählen → Bike-Typ, Farbe und Fahrer-Preset auswählen.
+      Approval-Pending-Screen solange Admin noch nicht freigeschaltet hat.
+      <div class="tags"><span class="tag">UX</span><span class="tag">Onboarding</span></div>
+    </div>
+  </div>
+</div>
 
 <div class="card done">
   <span class="badge done">Done</span>
   <div>
     <div class="card-title">Appwrite Backend — eigenes Projekt aufgesetzt</div>
     <div class="card-body">
-      Neues Appwrite Cloud Projekt angelegt. Setup-Script <code>scripts/setup-backend-collections.js</code> erstellt alle Collections,
-      Attribute und Indexes vollständig idempotent (re-runnable).
-      <span class="tag">Appwrite</span><span class="tag">Backend</span>
+      Neues Appwrite Cloud Projekt angelegt. Setup-Script <code>scripts/setup-backend-collections.js</code>
+      erstellt alle Collections, Attribute und Indexes vollständig idempotent (re-runnable).
+      <div class="tags"><span class="tag">Appwrite</span><span class="tag">Backend</span></div>
     </div>
   </div>
 </div>
@@ -215,9 +323,9 @@
     <div class="card-title">Appwrite Function: app-actions deployed</div>
     <div class="card-body">
       <code>functions/app-actions/src/main.js</code> — privilegierter Node.js Server-Code.
-      Deploy-Script <code>scripts/deploy-function.js</code> baut tar.gz in pure Node.js (kein Windows-tar-Problem),
+      Deploy-Script <code>scripts/deploy-function.js</code> baut tar.gz in pure Node.js,
       lädt hoch, setzt Variablen, wartet auf Build. Runtime: <code>node-22</code>.
-      <span class="tag">Function</span><span class="tag">Deploy</span>
+      <div class="tags"><span class="tag">Function</span><span class="tag">Deploy</span></div>
     </div>
   </div>
 </div>
@@ -229,7 +337,7 @@
     <div class="card-body">
       E-Mail/Passwort Auth über Appwrite. <code>initProfile</code> Action legt Profil-Dokument an
       (server-side, nur über API Key schreibbar). Approval-Flow vorhanden.
-      <span class="tag">Auth</span>
+      <div class="tags"><span class="tag">Auth</span></div>
     </div>
   </div>
 </div>
@@ -240,9 +348,9 @@
     <div class="card-title">XP-System</div>
     <div class="card-body">
       Zwei-Phasen-System: <code>addPendingXp</code> → <code>claimXp</code>.
-      XP-Berechnung: Base (10/18 je nach Zeitmessungen) + Sensor-XP (Airtime·³ + G-Force²) + PB-Boni (5–20 XP) + Daily Bonus (5 XP).
+      XP-Berechnung: Base + Sensor-XP (Airtime·³ + G-Force²) + PB-Boni + Daily Bonus.
       Level-Formel: quadratische Kurve via <code>getLevelFromXp()</code>.
-      <span class="tag">XP</span><span class="tag">Gamification</span>
+      <div class="tags"><span class="tag">XP</span><span class="tag">Gamification</span></div>
     </div>
   </div>
 </div>
@@ -253,8 +361,8 @@
     <div class="card-title">Münz-Ökonomie (Coins)</div>
     <div class="card-body">
       Coins werden 1:1 mit XP vergeben. <code>pendingCoins → coins</code> beim Claim.
-      Balance wird im Profil angezeigt (Stats-Zeile, Händler-Button).
-      <span class="tag">Coins</span><span class="tag">Economy</span>
+      Balance auf Profil-Screen und im Händler-Button sichtbar.
+      <div class="tags"><span class="tag">Coins</span><span class="tag">Economy</span></div>
     </div>
   </div>
 </div>
@@ -264,10 +372,10 @@
   <div>
     <div class="card-title">Shop / Händler</div>
     <div class="card-body">
-      <code>app/(app)/shop.tsx</code> — 4 Fox-Parts (2 Gabeln, 2 Dämpfer) mit Pixel-Art-Sprites aus <code>BikeParts_Done/</code>.
-      Kaufen per <code>purchaseItem</code> Action (server-seitige Validierung: Preis, Duplikat-Check).
-      Status: kaufen → ausrüsten → ausgerüstet ✓
-      <span class="tag">Shop</span><span class="tag">Parts</span>
+      Fox-Parts (2 Gabeln, 2 Dämpfer) + RockShox-Gabeln (4 Varianten) mit Pixel-Art-Sprites.
+      Kaufen per <code>purchaseItem</code> Action (server-seitige Preis- und Duplikat-Validierung).
+      Status-Flow: kaufen → ausrüsten → ausgerüstet ✓
+      <div class="tags"><span class="tag">Shop</span><span class="tag">Parts</span></div>
     </div>
   </div>
 </div>
@@ -278,8 +386,8 @@
     <div class="card-title">Equip-System (Fork & Shock)</div>
     <div class="card-body">
       <code>equippedFork</code> / <code>equippedShock</code> auf <code>BikeConfig</code>.
-      <code>equipPart()</code> im Store schreibt direkt in <code>bike_configs</code> Collection (user-writable).
-      <span class="tag">BikeConfig</span>
+      <code>equipPart()</code> im Store schreibt direkt in <code>bike_configs</code> Collection.
+      <div class="tags"><span class="tag">BikeConfig</span></div>
     </div>
   </div>
 </div>
@@ -289,11 +397,9 @@
   <div>
     <div class="card-title">Bike Editor Screen</div>
     <div class="card-body">
-      <code>app/(app)/bike-editor.tsx</code> — vollständiger Editor mit:
-      Live-Vorschau (PixelBike SVG), Rahmenfarbe (8 Swatches), Typ (Hardtail/Enduro/Downhill),
-      Federung (Air/Coil), Material (Alu/Carbon), Specs (Marke, Modell, Federweg v/h),
-      Equipped Parts Karten mit Shop-Link.
-      <span class="tag">Editor</span><span class="tag">UI</span>
+      Live-Vorschau (PixelBike SVG), Rahmenfarbe (8 Swatches), Typ, Federung, Material,
+      Specs (Marke, Modell, Federweg v/h), Equipped Parts Karten mit Shop-Link.
+      <div class="tags"><span class="tag">Editor</span><span class="tag">UI</span></div>
     </div>
   </div>
 </div>
@@ -303,10 +409,10 @@
   <div>
     <div class="card-title">Profil-Screen: Händler & Bike Editor Buttons</div>
     <div class="card-body">
-      Händler-Button (gold) mit Coin-Balance-Anzeige navigiert zu <code>/shop</code>.
+      Händler-Button (gold) mit Coin-Balance navigiert zu <code>/shop</code>.
       BIKE EDITOR-Button navigiert zu <code>/bike-editor</code>.
-      Stats-Zeile zeigt Münzen statt Rang.
-      <span class="tag">Profile</span><span class="tag">Navigation</span>
+      Stats-Zeile: Level, Coins, Tier.
+      <div class="tags"><span class="tag">Profile</span><span class="tag">Navigation</span></div>
     </div>
   </div>
 </div>
@@ -318,7 +424,7 @@
     <div class="card-body">
       Tier-Embleme (Bronze 1–3, Silber 1–3, Gold 1–3, Diamant 1–3) als PNG-Sprites.
       Glow-Effekt auf Profil-Karte je nach Tier-Intensität.
-      <span class="tag">UI</span><span class="tag">Progression</span>
+      <div class="tags"><span class="tag">UI</span><span class="tag">Progression</span></div>
     </div>
   </div>
 </div>
@@ -329,7 +435,7 @@
     <div class="card-title">Leaderboard</div>
     <div class="card-body">
       Rangliste nach XP/Level, Profil-Karten mit Avatar und Tier-Emblem.
-      <span class="tag">Social</span>
+      <div class="tags"><span class="tag">Social</span></div>
     </div>
   </div>
 </div>
@@ -337,11 +443,11 @@
 <div class="card done">
   <span class="badge done">Done</span>
   <div>
-    <div class="card-title">Social Feed (Clip Posts)</div>
+    <div class="card-title">Social Feed — Fire-Reaktionen</div>
     <div class="card-body">
-      <code>clip_posts</code> Collection, Fire-Reaktionen (toggle, denormalisierter Count).
-      <code>toggleFire</code> Action im Server-Code (self-healing Count).
-      <span class="tag">Social</span><span class="tag">Feed</span>
+      <code>clip_posts</code> Collection, Fire-Toggle (<code>toggleFire</code> Action, self-healing Count).
+      Denormalisierter <code>fireCount</code> + <code>firedBy[]</code> für schnelle Anzeige.
+      <div class="tags"><span class="tag">Social</span><span class="tag">Feed</span></div>
     </div>
   </div>
 </div>
@@ -353,7 +459,7 @@
     <div class="card-body">
       Admin-Team in Appwrite, <code>approveUser</code> Action, Admin-Panel in der App.
       Neue User sind initial <code>approved: false</code>.
-      <span class="tag">Admin</span>
+      <div class="tags"><span class="tag">Admin</span></div>
     </div>
   </div>
 </div>
@@ -361,11 +467,11 @@
 <div class="card done">
   <span class="badge done">Done</span>
   <div>
-    <div class="card-title">Trail-Feature / Strecken</div>
+    <div class="card-title">Trail-Features / Strecken-Tab</div>
     <div class="card-body">
-      <code>trail_features</code> Collection für POIs auf der Karte.
-      Strecken-Tab mit Karte.
-      <span class="tag">Map</span><span class="tag">Trails</span>
+      <code>trail_features</code> Collection für POIs (Drops, Sprünge, Lines).
+      Strecken-Tab mit Karte und Feature-Liste.
+      <div class="tags"><span class="tag">Map</span><span class="tag">Trails</span></div>
     </div>
   </div>
 </div>
@@ -375,8 +481,8 @@
   <div>
     <div class="card-title">XP-Bar Komponente</div>
     <div class="card-body">
-      Animierte Fortschrittsleiste zeigt XP zum nächsten Level, Pending-XP Preview, Claim-Button.
-      <span class="tag">UI</span><span class="tag">XP</span>
+      Animierte Fortschrittsleiste: XP zum nächsten Level, Pending-XP Preview, Claim-Button.
+      <div class="tags"><span class="tag">UI</span><span class="tag">XP</span></div>
     </div>
   </div>
 </div>
@@ -386,8 +492,9 @@
   <div>
     <div class="card-title">Theme-System (Dark/Light/Accent)</div>
     <div class="card-body">
-      <code>useTheme()</code> Hook, <code>useSettingsStore</code> mit Akzentfarbe (5 Optionen), Farbschema (System/Hell/Dunkel), Einheiten (km/mi).
-      <span class="tag">UI</span><span class="tag">Settings</span>
+      <code>useTheme()</code> Hook, <code>useSettingsStore</code> mit Akzentfarbe (5 Optionen),
+      Farbschema (System/Hell/Dunkel), Einheiten (km/mi).
+      <div class="tags"><span class="tag">UI</span><span class="tag">Settings</span></div>
     </div>
   </div>
 </div>
@@ -398,7 +505,7 @@
     <div class="card-title">Sensor-Screen (Airtime & G-Force)</div>
     <div class="card-body">
       Expo Sensors Integration, Live-Messung von Sprüngen und G-Kräften während eines Runs.
-      <span class="tag">Sensors</span><span class="tag">Hardware</span>
+      <div class="tags"><span class="tag">Sensors</span><span class="tag">Hardware</span></div>
     </div>
   </div>
 </div>
@@ -408,77 +515,69 @@
   <div>
     <div class="card-title">Run-Erfassung & PB-Tracking</div>
     <div class="card-body">
-      Runs werden mit Zeitstempeln, GPS-Distanz, Airtime, G-Force gespeichert.
-      PB-Flags (totalTime, p1Time, p2Time, maxAirtime, maxSpeed) werden server-seitig berechnet.
-      <span class="tag">Runs</span><span class="tag">Stats</span>
+      Runs mit Zeitstempeln, GPS-Distanz, Airtime, G-Force.
+      PB-Flags (totalTime, p1Time, p2Time, maxAirtime, maxSpeed) server-seitig berechnet.
+      <div class="tags"><span class="tag">Runs</span><span class="tag">Stats</span></div>
     </div>
   </div>
 </div>
 
 
-<!-- ═══════════════════════════════════════════════ BUGS ═══ -->
+<!-- ══════════════════════════════════════════════════════ BUGS ══ -->
 <h2>Bugs &amp; Issues</h2>
 
-<div class="card issue">
-  <span class="badge issue">Bug</span>
+<div class="card bug">
+  <span class="badge bug">Bug</span>
   <div>
-    <div class="card-title priority-high">Bike-Grafik im Editor sieht schlecht aus</div>
+    <div class="card-title">Bike-Grafik im Editor sieht schlecht aus</div>
     <div class="card-body">
-      Die <code>PixelBike.tsx</code> SVG-Komponente ist hand-coded und wirkt unproportional und unprofessionell.
-      Sie muss durch eine bessere Lösung ersetzt werden.
+      Die <code>PixelBike.tsx</code> SVG-Komponente ist hand-coded und wirkt unproportional.
+      Muss durch Pixel-Art PNGs (wie Hardtail.png/Enduro.png) mit Farboverlay ersetzt werden.
       <br/><br/>
-      <strong>Optionen:</strong>
-      <ul>
-        <li><strong>Option A (empfohlen):</strong> Echte Pixel-Art als PNG-Sprites (wie Hardtail.png / Enduro.png) mit Farboverlay-Technik — z.B. eine Maske/Tint-Layer in React Native via <code>tintColor</code> oder ein zweischichtiges Image (Silhouette + Farblayer)</li>
-        <li><strong>Option B:</strong> SVG-Datei extern designen (Figma/Aseprite → SVG Export) und als statische SVG-Datei einbinden, Farbe via Props</li>
-        <li><strong>Option C:</strong> Bessere Hand-coded SVG mit mehr Liebe zum Detail (aufwändig)</li>
-        <li><strong>Option D:</strong> Vorerst die statischen Hardtail/Enduro/Downhill.png zeigen (sehen gut aus!) — Farbvorschau weglassen bis Lösung steht</li>
-      </ul>
-      <span class="tag priority-high">Priorität: Hoch</span><span class="tag">Bike Editor</span><span class="tag">UI</span>
+      <strong>Empfehlung:</strong> Statische PNGs je Bike-Typ + simplen Farbbalken als Indikator,
+      bis ein echtes farbiges Sprite vorliegt.
+      <div class="tags"><span class="tag" style="color:#ff5c5c;border-color:#ff5c5c44;">Priorität: Hoch</span><span class="tag">Bike Editor</span><span class="tag">UI</span></div>
     </div>
   </div>
 </div>
 
-<div class="card issue">
-  <span class="badge issue">Bug</span>
+<div class="card bug">
+  <span class="badge bug">Bug</span>
   <div>
     <div class="card-title">Neue Registrierungen erstellen kein Profil-Dokument</div>
     <div class="card-body">
       <code>initProfile</code> schlägt fehl wenn die Function den <code>x-appwrite-key</code>
       Header (restricted scope) statt des eigenen API Keys verwendet.
-      Workaround ist deployed (API-Key Priorität gefixt), aber bei neuen Usern manuell zu testen.
-      <span class="tag">Auth</span><span class="tag">Backend</span>
+      Workaround deployed, bei neuen Usern manuell zu testen.
+      <div class="tags"><span class="tag">Auth</span><span class="tag">Backend</span></div>
     </div>
   </div>
 </div>
 
-<div class="card issue">
-  <span class="badge issue">Bug</span>
+<div class="card bug">
+  <span class="badge bug">Bug</span>
   <div>
     <div class="card-title">BikeConfigurator (altes Inline-Widget) noch im Code</div>
     <div class="card-body">
       <code>components/BikeConfigurator.tsx</code> ist noch vorhanden aber vom Profil-Screen entfernt.
-      Sollte aufgeräumt werden — entweder löschen oder in den neuen Bike Editor integrieren.
-      Der Import ist bereits entfernt.
-      <span class="tag">Cleanup</span>
+      Sollte gelöscht oder in den neuen Bike Editor integriert werden.
+      <div class="tags"><span class="tag">Cleanup</span></div>
     </div>
   </div>
 </div>
 
 
-<!-- ═══════════════════════════════════════════════ TODO ═══ -->
+<!-- ══════════════════════════════════════════════════════ TODO ══ -->
 <h2>To-Do</h2>
 
 <div class="card todo">
   <span class="badge todo">Todo</span>
   <div>
-    <div class="card-title">Bike-Grafik ersetzen <span class="priority-high">[PRIO 1]</span></div>
+    <div class="card-title">Bike-Grafik ersetzen <span style="color:var(--bug);font-size:11px;">[PRIO 1]</span></div>
     <div class="card-body">
-      Entscheiden welche Strategie (siehe Bug oben) und umsetzen.
-      Ziel: Im Bike Editor sieht das Fahrrad gut aus und reagiert auf Farbwahl.
-      Empfehlung: Statische PNGs für die 3 Typen + simplen Farbbalken/Badge als Farbindikator,
-      bis ein echtes farbiges Sprite vorliegt.
-      <span class="tag">Bike Editor</span><span class="tag">Design</span>
+      Statische PNGs für die 3 Typen + Farbindikator als Übergangslösung.
+      Langfristig: echtes farbiges Sprite (Figma/Aseprite → Export).
+      <div class="tags"><span class="tag">Bike Editor</span><span class="tag">Design</span></div>
     </div>
   </div>
 </div>
@@ -488,17 +587,16 @@
   <div>
     <div class="card-title">Mehr Bike Parts</div>
     <div class="card-body">
-      Aktuell: 2 Gabeln, 2 Dämpfer (Fox). Geplant:
+      Aktuell: Fox (2 Gabeln, 2 Dämpfer) + RockShox (4 Gabeln). Geplant:
       <ul>
         <li>Laufräder (verschiedene Felgen-Designs)</li>
         <li>Kurbeln / Antrieb</li>
         <li>Lenker & Vorbau</li>
-        <li>Sattel</li>
-        <li>Vollständige Rahmen (als kaufbares Part)</li>
+        <li>Vollständige Rahmen als kaufbares Part</li>
       </ul>
       Jedes neue Part braucht: Pixel-Art-Sprite, Eintrag in <code>constants/shopItems.ts</code>
-      und Preis in <code>functions/app-actions/src/main.js → ITEM_PRICES</code>.
-      <span class="tag">Shop</span><span class="tag">Content</span>
+      und Preis in <code>ITEM_PRICES</code> der Server-Function.
+      <div class="tags"><span class="tag">Shop</span><span class="tag">Content</span></div>
     </div>
   </div>
 </div>
@@ -508,21 +606,9 @@
   <div>
     <div class="card-title">Jersey / Fahrer-Customization</div>
     <div class="card-body">
-      <code>jerseyJ</code>, <code>jerseyD</code>, <code>hairColor</code> etc. sind in <code>BikeConfig</code> gespeichert
-      aber im neuen Bike Editor noch nicht editierbar. Fahrer-Vorschau fehlt komplett.
-      <span class="tag">Bike Editor</span><span class="tag">Avatar</span>
-    </div>
-  </div>
-</div>
-
-<div class="card todo">
-  <span class="badge todo">Todo</span>
-  <div>
-    <div class="card-title">Coin-Balance in der App auffüllen (Test-Flow)</div>
-    <div class="card-body">
-      Für Tests: Einen Run aufzeichnen → XP/Coins pending → Claim drücken → im Shop kaufen.
-      Alternativ: Admin-Funktion zum manuellen Coin-Vergeben (z.B. <code>grantCoins</code> Action nur für Admins).
-      <span class="tag">Testing</span><span class="tag">Admin</span>
+      <code>jerseyJ</code>, <code>jerseyD</code>, <code>hairColor</code> etc. in <code>BikeConfig</code>
+      gespeichert aber im Bike Editor noch nicht editierbar. Fahrer-Vorschau fehlt.
+      <div class="tags"><span class="tag">Bike Editor</span><span class="tag">Avatar</span></div>
     </div>
   </div>
 </div>
@@ -532,26 +618,9 @@
   <div>
     <div class="card-title">Push Notifications</div>
     <div class="card-body">
-      Benachrichtigungen wenn:
-      <ul>
-        <li>Jemand das eigene Clip mit 🔥 feuert</li>
-        <li>Neuer PB</li>
-        <li>Admin-Approval</li>
-      </ul>
+      Benachrichtigungen bei: 🔥 auf eigenem Clip, neuem PB, Admin-Approval.
       Appwrite Messaging oder Expo Notifications.
-      <span class="tag">Notifications</span>
-    </div>
-  </div>
-</div>
-
-<div class="card todo">
-  <span class="badge todo">Todo</span>
-  <div>
-    <div class="card-title">Clip hochladen (Video)</div>
-    <div class="card-body">
-      Video vom Run aufnehmen und als Clip im Feed posten.
-      Appwrite Storage für Video-Dateien, Thumbnail-Generierung.
-      <span class="tag">Feed</span><span class="tag">Video</span>
+      <div class="tags"><span class="tag">Notifications</span></div>
     </div>
   </div>
 </div>
@@ -563,7 +632,7 @@
     <div class="card-body">
       POIs auf der Karte anlegen/bearbeiten: Drops, Sprünge, Lines, Warnings.
       Aktuell nur lesbar. Admin-seitiges Anlegen über die App.
-      <span class="tag">Map</span><span class="tag">Admin</span>
+      <div class="tags"><span class="tag">Map</span><span class="tag">Admin</span></div>
     </div>
   </div>
 </div>
@@ -575,7 +644,7 @@
     <div class="card-body">
       Teams erstellen, Mitglieder einladen, Team-Leaderboard, Team-Logo.
       Aktuell nur als String-Feld auf dem Profil.
-      <span class="tag">Social</span><span class="tag">Teams</span>
+      <div class="tags"><span class="tag">Social</span><span class="tag">Teams</span></div>
     </div>
   </div>
 </div>
@@ -585,9 +654,9 @@
   <div>
     <div class="card-title">Achievement-System verdrahten</div>
     <div class="card-body">
-      Achievements sind UI-only (aus Stats berechnet). Sollen persistiert und mit Belohnungen verknüpft werden:
+      Achievements sind UI-only. Sollen persistiert und mit Belohnungen verknüpft werden:
       erster Sprung → Coin-Bonus, 5 Runs → Emblem-Upgrade, etc.
-      <span class="tag">Gamification</span><span class="tag">Backend</span>
+      <div class="tags"><span class="tag">Gamification</span><span class="tag">Backend</span></div>
     </div>
   </div>
 </div>
@@ -595,11 +664,11 @@
 <div class="card todo">
   <span class="badge todo">Todo</span>
   <div>
-    <div class="card-title">Onboarding-Flow für neue User</div>
+    <div class="card-title">Coin-Balance für Tests auffüllen</div>
     <div class="card-body">
-      Nach Registrierung: Username wählen, Bike-Typ wählen, Farbe wählen — dann direkt in den Editor.
-      Approval-Pending-Screen solange Admin noch nicht freigeschaltet hat.
-      <span class="tag">UX</span><span class="tag">Onboarding</span>
+      Admin-Funktion zum manuellen Coin-Vergeben (<code>grantCoins</code> Action, nur Admins).
+      Alternativ: Run aufzeichnen → Pending XP/Coins → Claim.
+      <div class="tags"><span class="tag">Testing</span><span class="tag">Admin</span></div>
     </div>
   </div>
 </div>
@@ -611,13 +680,13 @@
     <div class="card-body">
       Runs lokal speichern wenn offline, beim nächsten Start synchronisieren.
       <code>expo-sqlite</code> oder AsyncStorage als lokaler Cache.
-      <span class="tag">Offline</span><span class="tag">Sync</span>
+      <div class="tags"><span class="tag">Offline</span><span class="tag">Sync</span></div>
     </div>
   </div>
 </div>
 
 
-<!-- ═══════════════════════════════════════════════ IDEAS ═══ -->
+<!-- ══════════════════════════════════════════════════════ IDEAS ══ -->
 <h2>Ideen / Zukunft</h2>
 
 <div class="card idea">
@@ -625,8 +694,9 @@
   <div>
     <div class="card-title">Saisonale Events</div>
     <div class="card-body">
-      Befristete Challenges mit exklusiven Parts als Belohnung. Z.B. "Sommer-Cup": 10 Runs in 2 Wochen → Exclusive Gabel.
-      <span class="tag">Events</span><span class="tag">Seasonal</span>
+      Befristete Challenges mit exklusiven Parts als Belohnung.
+      Z.B. "Sommer-Cup": 10 Runs in 2 Wochen → Exclusive Gabel.
+      <div class="tags"><span class="tag">Events</span><span class="tag">Seasonal</span></div>
     </div>
   </div>
 </div>
@@ -638,7 +708,7 @@
     <div class="card-body">
       Parts mit Leveln (Stufe 1–3), die Sensor-XP-Multiplikatoren geben.
       Z.B. Fox Factory Stufe 2: +10% Airtime-XP.
-      <span class="tag">Economy</span><span class="tag">Depth</span>
+      <div class="tags"><span class="tag">Economy</span><span class="tag">Depth</span></div>
     </div>
   </div>
 </div>
@@ -649,7 +719,7 @@
     <div class="card-title">Apple Watch / Wear OS Companion</div>
     <div class="card-body">
       Run-Aufzeichnung direkt von der Uhr, Anzeige von Airtime und Speed live auf dem Handgelenk.
-      <span class="tag">Hardware</span><span class="tag">Future</span>
+      <div class="tags"><span class="tag">Hardware</span><span class="tag">Future</span></div>
     </div>
   </div>
 </div>
@@ -659,46 +729,49 @@
   <div>
     <div class="card-title">Globales Leaderboard mit Trail-Filter</div>
     <div class="card-body">
-      Rangliste nicht nur nach XP, sondern nach Strecken-Bestzeiten und Airtime auf einem bestimmten Trail.
-      <span class="tag">Social</span><span class="tag">Competition</span>
+      Rangliste nach Strecken-Bestzeiten und Airtime auf einem bestimmten Trail — nicht nur XP.
+      <div class="tags"><span class="tag">Social</span><span class="tag">Competition</span></div>
     </div>
   </div>
 </div>
 
 
-<!-- ═══════════════════════════════════════════════ TECH STACK ═══ -->
+<!-- ══════════════════════════════════════════════════════ STACK ══ -->
 <h2>Tech Stack</h2>
 
-<div class="card" style="border-left-color: #334155; display: block;">
-  <div style="display: flex; flex-wrap: wrap; gap: 8px;">
-    <span class="tag" style="background:#1e3a5f; color:#60a5fa; font-size:11px; padding:5px 10px;">React Native 0.81 + Expo 54</span>
-    <span class="tag" style="background:#1e3a5f; color:#60a5fa; font-size:11px; padding:5px 10px;">Expo Router (file-based)</span>
-    <span class="tag" style="background:#1a2a1a; color:#4ade80; font-size:11px; padding:5px 10px;">Appwrite Cloud (cloud.appwrite.io)</span>
-    <span class="tag" style="background:#1a2a1a; color:#4ade80; font-size:11px; padding:5px 10px;">Appwrite Functions (node-22)</span>
-    <span class="tag" style="background:#2a1a3a; color:#c4b5fd; font-size:11px; padding:5px 10px;">Zustand (State Management)</span>
-    <span class="tag" style="background:#2a1a3a; color:#c4b5fd; font-size:11px; padding:5px 10px;">TanStack Query</span>
-    <span class="tag" style="background:#2a1a00; color:#fbbf24; font-size:11px; padding:5px 10px;">TypeScript</span>
-    <span class="tag" style="background:#2a1a00; color:#fbbf24; font-size:11px; padding:5px 10px;">react-native-svg</span>
-    <span class="tag" style="background:#1a1a1a; color:#94a3b8; font-size:11px; padding:5px 10px;">Expo Sensors (Airtime/G-Force)</span>
-    <span class="tag" style="background:#1a1a1a; color:#94a3b8; font-size:11px; padding:5px 10px;">react-native-maps</span>
+<div class="card" style="border-left-color: #1e1f26; display: block; padding: 18px 20px;">
+  <div class="stack">
+    <span class="chip green">React Native 0.81 + Expo SDK 54</span>
+    <span class="chip green">Expo Router (file-based)</span>
+    <span class="chip green">Appwrite Cloud</span>
+    <span class="chip green">Appwrite Functions (node-22)</span>
+    <span class="chip green">Cloudinary (Video Storage)</span>
+    <span class="chip blue">Zustand (State)</span>
+    <span class="chip blue">TanStack Query</span>
+    <span class="chip blue">expo-video</span>
+    <span class="chip blue">expo-image-picker</span>
+    <span class="chip purple">TypeScript</span>
+    <span class="chip purple">react-native-svg</span>
+    <span class="chip yellow">Expo Sensors (Airtime/G-Force)</span>
+    <span class="chip grey">react-native-maps</span>
+    <span class="chip grey">react-native-url-polyfill</span>
   </div>
 </div>
 
 
-<!-- ═══════════════════════════════════════════════ SCRIPTS ═══ -->
+<!-- ══════════════════════════════════════════════════════ SCRIPTS ══ -->
 <h2>Wichtige Scripts &amp; Commands</h2>
 
-<div class="card" style="border-left-color: #334155; display: block;">
-  <div class="card-body" style="font-family: 'Courier New', monospace; font-size: 12px; line-height: 2;">
-    <code>npm run start</code> — Expo Dev Server<br/>
-    <code>npm run backend:setup</code> — Appwrite Collections + Indexes anlegen (idempotent)<br/>
-    <code>npm run function:deploy</code> — app-actions Function deployen<br/>
-    <code>npm run admin:create</code> — Admin-User anlegen<br/>
-    <code>npm run migrate:profiles</code> — Profil-Permissions migrieren
-  </div>
+<div class="scripts">
+  <code>npm run start</code> — Expo Dev Server<br/>
+  <code>npm run backend:setup</code> — Appwrite Collections + Indexes anlegen (idempotent)<br/>
+  <code>npm run function:deploy</code> — app-actions Function deployen<br/>
+  <code>npm run admin:create</code> — Admin-User anlegen<br/>
+  <code>npm run migrate:profiles</code> — Profil-Permissions migrieren
 </div>
 
-<p class="updated">Zuletzt aktualisiert: 26. Mai 2026</p>
+
+<p class="updated">Zuletzt aktualisiert: 29. Mai 2026</p>
 
 </body>
 </html>
