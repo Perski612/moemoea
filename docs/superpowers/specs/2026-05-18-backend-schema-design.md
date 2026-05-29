@@ -10,12 +10,12 @@
 
 ## Context
 
-MOE MOEA Trails is an MTB trail app for a single local trail (Neckartal). Users ride the trail, the app measures sensor data on-device, uploads processed metrics to Appwrite, and displays stats, leaderboards, and a social feed.
+MOE MOEA Trails is an MTB trail app for a single local trail (Neckartal). Users ride the trail, the app measures sensor data on-device, uploads processed metrics to Appwrite, and displays stats, leaderboards, and a social video feed.
 
 **Phase 1 (PoC):** Phone sensors (gyro, GPS) — raw data processed on-device, only metrics uploaded.  
 **Phase 2 (later):** External hardware sensor on bike, same schema, `dataSource` field distinguishes both.
 
-No video files are stored. Storage usage is DB-only (small numbers/strings per document).
+**Video storage:** Cloudinary (external). Appwrite stores only the `secure_url` reference in `clip_posts`.
 
 ---
 
@@ -31,7 +31,11 @@ One document per user, `$id` = Appwrite account userId.
 | username | string | Display name |
 | team | string | e.g. "MOE MOEA Crew" |
 | xp | integer | Total XP accumulated |
-| level | integer | Derived from XP |
+| pendingXp | integer | Staged XP not yet claimed |
+| level | integer | Derived from XP via `getLevelFromXp()` |
+| coins | integer | Spendable currency (1:1 with XP earned) |
+| pendingCoins | integer | Staged coins not yet claimed |
+| ownedParts | string[] | Shop item IDs purchased by user |
 | approved | boolean | Admin must approve new users |
 | isAdmin | boolean | Admin flag |
 | tier | enum | `'rookie' \| 'veteran' \| 'legend'` — set by admin |
@@ -104,23 +108,28 @@ One document per descent. Core of the app — all leaderboards and stats are com
 
 ### `clip_posts`
 
-Feed entries for the Style Contest. No video file — just metadata and social interaction. Users submit their best run for the monthly contest.
+Feed entries for the monthly Style Contest. Each post links to a video hosted on Cloudinary.
 
 | Field | Type | Notes |
 |-------|------|-------|
-| userId | string | |
+| userId | string | Appwrite account ID |
+| username | string | Denormalized for fast feed display |
+| tier | enum | `'rookie' \| 'veteran' \| 'legend'` — denormalized |
 | runId | string \| null | Optional link to a run |
 | contestMonth | string | `YYYY-MM` — which contest this belongs to |
-| verified | boolean | QR code scanned at trail photo spot |
+| verified | boolean | Reserved for future trail photo spot verification |
 | fireCount | integer | Cached count for fast display |
 | firedBy | string[] | Array of userIds — prevents double-firing |
-| createdAt | datetime | |
+| videoUrl | string | Cloudinary `secure_url` of the uploaded video |
+| reactions | string | JSON: `Record<emoji, userId[]>` — e.g. `{"🔥":["uid1"],"💯":["uid2"]}` |
 
-**No separate `clip_reactions` collection** — `firedBy[]` is sufficient for the expected user count (~50 users).
+**Video storage:** Cloudinary Free Tier (25 GB, 100 MB per file max). Upload happens client → Cloudinary directly via unsigned upload preset. The `secure_url` is stored in this document.
+
+**No separate `clip_reactions` collection** — `firedBy[]` and `reactions` JSON are sufficient for the expected user count (~50 users).
 
 **Style score** on the leaderboard = `fireCount` of the user's clip posts for that month.
 
-**Indexes:** `contestMonth`, `userId`, `createdAt`.
+**Indexes:** `contestMonth`, `userId`, `$createdAt`.
 
 ---
 
@@ -129,9 +138,27 @@ Feed entries for the Style Contest. No video file — just metadata and social i
 | Data | Reason |
 |------|--------|
 | Raw gyro/GPS sensor arrays | Processed on-device. Would be 500KB–2MB per run. Never uploaded. |
-| Video files | Out of scope for now. Would require external storage (e.g. Cloudflare R2). |
+| Video binary data | Hosted on Cloudinary. Only the `secure_url` is stored in `clip_posts`. |
 | Leaderboard snapshots | Computed live from `runs`. User count is small enough. |
 | Weekly goal targets | Hardcoded in app (50km distance, 30s airtime, 80km/h speed). |
+
+---
+
+## Server Actions (`functions/app-actions`)
+
+All privileged writes go through the `app-actions` Appwrite Function (Node 22). The function reads `x-appwrite-user-id` from the request header to identify the caller — no JWT needed on the client.
+
+| Action | Description |
+|--------|-------------|
+| `initProfile` | Creates profile document on first login |
+| `approveUser` | Admin only — sets `approved: true` |
+| `addPendingXp` | Calculates and stages XP for a completed run |
+| `claimXp` | Moves `pendingXp` → `xp`, triggers level-up logic |
+| `purchaseItem` | Deducts coins, adds item to `ownedParts` |
+| `createClipPost` | Creates `clip_posts` document with `videoUrl` from Cloudinary |
+| `reactToClip` | Toggles emoji reaction (read-modify-write on `reactions` JSON) |
+| `deleteClipPost` | Deletes clip post — only if `callerId === post.userId` |
+| `toggleFire` | Toggles fire on a clip, rebuilds denormalized `fireCount` / `firedBy` |
 
 ---
 
@@ -140,5 +167,5 @@ Feed entries for the Style Contest. No video file — just metadata and social i
 - **New trail:** Add a `trails` collection, reference by `trailId` in `sessions`. Already stubbed.
 - **External hardware:** Set `dataSource: 'external'` in runs. No schema change needed.
 - **More sectors:** Add `p3Time`, `p4Time` fields to `runs` — or migrate to a `sector_times` sub-structure.
-- **Video (Phase 2):** Add `videoUrl` field to `clip_posts`, store in Cloudflare R2 or similar.
+- **Video storage upgrade:** Replace Cloudinary with Bunny.net Stream or self-hosted for HLS streaming — only `videoUrl` in `clip_posts` needs to change.
 - **Teams/Groups:** `team` is already a string in `profiles`. A `teams` collection can be added later.
