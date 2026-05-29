@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { ScrollView, View, Text, TouchableOpacity, StyleSheet, Dimensions } from 'react-native'
+import { Animated, ScrollView, View, Text, TouchableOpacity, StyleSheet, Dimensions } from 'react-native'
 import { useFocusEffect, router } from 'expo-router'
 import Svg, { Path, Defs, LinearGradient, Stop } from 'react-native-svg'
 import { AppHeader } from '@/components/ui/AppHeader'
@@ -321,6 +321,18 @@ export default function DashboardScreen() {
   const [rankUpData, setRankUpData] = useState<{ newEmblem: EmblemDef; oldEmblem: EmblemDef } | null>(null)
   const [levelUpLevel, setLevelUpLevel] = useState<number | null>(null)
   const userId = session?.userId
+  const pulseAnim = useRef(new Animated.Value(1)).current
+
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, { toValue: 2.2, duration: 1000, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1,   duration: 1000, useNativeDriver: true }),
+      ])
+    )
+    loop.start()
+    return () => loop.stop()
+  }, [pulseAnim])
 
   const loadDashboard = useCallback(() => {
     if (!userId) return
@@ -385,25 +397,17 @@ export default function DashboardScreen() {
       >
         {/* Identity + XP */}
         <View style={{ paddingTop: 8, paddingBottom: 8 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
-            <View style={{ flex: 1 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 7 }}>
-                <Text style={[s.username, { color: theme.text }]}>{username}</Text>
-                <Text style={[s.bikeTypeInline, { color: accent }]}>{resolvedBikeType.toUpperCase()}</Text>
-              </View>
+          <View style={{ marginBottom: 12 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 7 }}>
+              <Text style={[s.username, { color: theme.text }]}>{username}</Text>
+              <Text style={[s.bikeTypeInline, { color: accent }]}>{resolvedBikeType.toUpperCase()}</Text>
+            </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 }}>
               <Text style={[s.teamText, { color: theme.muted }]}>{profile?.team ?? 'Kein Team'}</Text>
-              <View style={[s.levelBadge, { borderColor: `${accent}44`, backgroundColor: `${accent}1a`, alignSelf: 'flex-start', marginTop: 6 }]}>
+              <View style={[s.levelBadge, { borderColor: `${accent}44`, backgroundColor: `${accent}1a` }]}>
                 <Text style={[s.levelText, { color: accent }]}>LVL {level}</Text>
               </View>
             </View>
-            <TouchableOpacity
-              onPress={() => router.push('/(app)/(tabs)/sensor')}
-              style={[s.recBtn, { backgroundColor: `${accent}18`, borderColor: `${accent}55` }]}
-              activeOpacity={0.75}
-            >
-              <View style={[s.recDot, { backgroundColor: accent }]} />
-              <Text style={[s.recLabel, { color: accent }]}>REC</Text>
-            </TouchableOpacity>
           </View>
           <XpBar
             accent={accent}
@@ -412,6 +416,23 @@ export default function DashboardScreen() {
             onRankUp={(newEmblem, oldEmblem) => setRankUpData({ newEmblem, oldEmblem })}
           />
         </View>
+
+        {/* REC — Primäre Aktion */}
+        <TouchableOpacity
+          onPress={() => router.push('/(app)/(tabs)/sensor')}
+          style={[s.recCard, { borderColor: accent, backgroundColor: `${accent}12` }]}
+          activeOpacity={0.8}
+        >
+          <View style={s.recPulseWrap}>
+            <Animated.View style={[s.recPulseRing, { backgroundColor: accent, transform: [{ scale: pulseAnim }] }]} />
+            <View style={[s.recDotLarge, { backgroundColor: accent }]} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={[s.recCardLabel, { color: accent }]}>REC</Text>
+            <Text style={[s.recCardSub, { color: theme.muted }]}>Run aufzeichnen</Text>
+          </View>
+          <Text style={{ fontFamily: Fonts.mono, fontSize: 20, color: accent }}>›</Text>
+        </TouchableOpacity>
 
         {/* Wochenziele */}
         <Text style={[s.sectionLabel, { color: accent }]}>Wochenziele</Text>
@@ -480,13 +501,21 @@ const s = StyleSheet.create({
   username: { fontFamily: Fonts.bodyBd, fontSize: 20, fontWeight: '700' },
   bikeTypeInline: { fontFamily: Fonts.mono, fontSize: 13, fontWeight: '700', letterSpacing: 1.5 },
   teamText: { fontFamily: Fonts.body, fontSize: 13, marginTop: 2 },
-  recBtn: {
-    borderWidth: 1, borderRadius: 12,
-    paddingHorizontal: 16, paddingVertical: 8,
-    alignItems: 'center', justifyContent: 'center', gap: 5,
+  recCard: {
+    flexDirection: 'row', alignItems: 'center', gap: 16,
+    borderWidth: 1.5, borderRadius: 16,
+    paddingHorizontal: 20, paddingVertical: 18,
+    marginBottom: 20,
   },
-  recDot: { width: 10, height: 10, borderRadius: 5 },
-  recLabel: { fontFamily: Fonts.mono, fontSize: 12, fontWeight: '700', letterSpacing: 2 },
+  recPulseWrap: {
+    width: 42, height: 42, alignItems: 'center', justifyContent: 'center',
+  },
+  recPulseRing: {
+    position: 'absolute', width: 42, height: 42, borderRadius: 21, opacity: 0.18,
+  },
+  recDotLarge: { width: 16, height: 16, borderRadius: 8 },
+  recCardLabel: { fontFamily: Fonts.mono, fontSize: 26, fontWeight: '700', letterSpacing: 4, lineHeight: 30 },
+  recCardSub: { fontFamily: Fonts.body, fontSize: 13, marginTop: 1 },
   levelBadge: { borderWidth: 1, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 4 },
   levelText: { fontFamily: Fonts.mono, fontSize: 13, fontWeight: '700' },
   levelName: { fontFamily: Fonts.bodyBd, fontSize: 16 },
