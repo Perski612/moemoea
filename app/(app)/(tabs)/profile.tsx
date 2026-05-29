@@ -132,6 +132,34 @@ export default function ProfileScreen() {
         {/* XP Bar */}
         <XpBar accent={accent} />
 
+        {/* Quick Actions */}
+        <View style={s.quickActions}>
+          <TouchableOpacity
+            style={[s.quickBtn, { borderColor: 'rgba(255,215,0,0.35)', backgroundColor: 'rgba(255,215,0,0.07)' }]}
+            onPress={() => router.push('/(app)/shop')}
+            activeOpacity={0.75}
+          >
+            <View style={s.coinIconSm}><Text style={s.coinIconSmText}>¢</Text></View>
+            <View style={{ flex: 1 }}>
+              <Text style={[s.quickBtnTitle, { color: '#FFD700' }]}>HÄNDLER</Text>
+              <Text style={[s.quickBtnSub, { color: theme.muted }]}>{profile?.coins ?? 0} Münzen</Text>
+            </View>
+            <Text style={{ fontFamily: Fonts.mono, fontSize: 16, color: '#FFD700' }}>›</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[s.quickBtn, { borderColor: `${accent}44`, backgroundColor: `${accent}0d` }]}
+            onPress={() => router.push('/(app)/bike-editor')}
+            activeOpacity={0.75}
+          >
+            <Text style={{ fontFamily: Fonts.mono, fontSize: 18, color: accent }}>✎</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={[s.quickBtnTitle, { color: accent }]}>BIKE EDITOR</Text>
+              <Text style={[s.quickBtnSub, { color: theme.muted }]}>Farbe & Parts</Text>
+            </View>
+            <Text style={{ fontFamily: Fonts.mono, fontSize: 16, color: accent }}>›</Text>
+          </TouchableOpacity>
+        </View>
+
         {/* Stats */}
         <View style={s.statsRow}>
           {[
@@ -146,23 +174,6 @@ export default function ProfileScreen() {
             </View>
           ))}
         </View>
-
-        {/* Händler */}
-        <TouchableOpacity
-          style={[s.shopBtn, { borderColor: `rgba(255,215,0,0.3)`, backgroundColor: 'rgba(255,215,0,0.07)' }]}
-          onPress={() => router.push('/(app)/shop')}
-          activeOpacity={0.75}
-        >
-          <View style={{ flex: 1 }}>
-            <Text style={[s.shopBtnTitle, { color: '#FFD700' }]}>HÄNDLER</Text>
-            <Text style={[s.shopBtnSub, { color: theme.muted }]}>Parts & Upgrades kaufen</Text>
-          </View>
-          <View style={s.shopBtnCoins}>
-            <View style={s.coinIconSm}><Text style={s.coinIconSmText}>¢</Text></View>
-            <Text style={s.shopBtnCoinVal}>{profile?.coins ?? 0}</Text>
-          </View>
-          <Text style={{ fontFamily: Fonts.mono, fontSize: 16, color: '#FFD700', marginLeft: 4 }}>›</Text>
-        </TouchableOpacity>
 
         {/* Bike-Setup Preview */}
         <Label color={accent}>Mein Bike-Setup</Label>
@@ -216,18 +227,29 @@ export default function ProfileScreen() {
           </View>
         </GlassCard>
 
-        {/* Bike Editor Link */}
-        <TouchableOpacity
-          style={[s.editorBtn, { borderColor: `${accent}44`, backgroundColor: `${accent}0d` }]}
-          onPress={() => router.push('/(app)/bike-editor')}
-          activeOpacity={0.75}
-        >
-          <View style={{ flex: 1 }}>
-            <Text style={[s.editorBtnTitle, { color: accent }]}>BIKE EDITOR</Text>
-            <Text style={[s.editorBtnSub, { color: theme.muted }]}>Farbe, Parts & Specs anpassen</Text>
-          </View>
-          <Text style={{ fontFamily: Fonts.mono, fontSize: 16, color: accent }}>›</Text>
-        </TouchableOpacity>
+        {/* Werkzeuge */}
+        <Label color={accent}>Werkzeuge</Label>
+        <GlassCard style={{ marginBottom: 16 }} padding={0}>
+          <TouchableOpacity
+            style={s.toolRow}
+            onPress={() => router.push('/(app)/(tabs)/sensor')}
+            activeOpacity={0.75}
+          >
+            <Text style={[s.toolIcon, { color: accent }]}>◎</Text>
+            <Text style={[s.toolLabel, { color: theme.text }]}>Sensor & Run aufzeichnen</Text>
+            <Text style={{ fontFamily: Fonts.mono, fontSize: 16, color: theme.dim }}>›</Text>
+          </TouchableOpacity>
+          <View style={{ height: 1, backgroundColor: theme.cardBorder, marginHorizontal: 16 }} />
+          <TouchableOpacity
+            style={s.toolRow}
+            onPress={() => router.push('/(app)/(tabs)/strecke')}
+            activeOpacity={0.75}
+          >
+            <Text style={[s.toolIcon, { color: accent }]}>⬡</Text>
+            <Text style={[s.toolLabel, { color: theme.text }]}>Strecke & Sektorzeiten</Text>
+            <Text style={{ fontFamily: Fonts.mono, fontSize: 16, color: theme.dim }}>›</Text>
+          </TouchableOpacity>
+        </GlassCard>
 
         {/* Settings */}
         <Label color={accent}>Settings</Label>
@@ -378,37 +400,29 @@ const s = StyleSheet.create({
   },
   achieveLabel: { fontFamily: Fonts.bodyBd, fontSize: 11, textAlign: 'center', lineHeight: 15 },
 
-  shopBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderRadius: Radius.md,
-    padding: Spacing.md,
-    marginBottom: Spacing.md,
-    gap: 8,
+  quickActions: {
+    flexDirection: 'column', gap: 8, marginBottom: Spacing.md,
   },
-  shopBtnTitle: { fontFamily: Fonts.display, fontSize: 20, letterSpacing: 1.5 },
-  shopBtnSub: { fontFamily: Fonts.body, fontSize: 12, marginTop: 1 },
-  shopBtnCoins: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  quickBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    borderWidth: 1, borderRadius: Radius.md, padding: Spacing.md,
+  },
+  quickBtnTitle: { fontFamily: Fonts.bodyBd, fontSize: 15, letterSpacing: 1 },
+  quickBtnSub: { fontFamily: Fonts.body, fontSize: 12, marginTop: 1 },
+
   coinIconSm: {
-    width: 16, height: 16, borderRadius: 8,
+    width: 22, height: 22, borderRadius: 11,
     backgroundColor: '#FFD700',
     alignItems: 'center', justifyContent: 'center',
   },
-  coinIconSmText: { fontFamily: Fonts.monoBd, fontSize: 9, color: '#000', lineHeight: 16 },
-  shopBtnCoinVal: { fontFamily: Fonts.monoBd, fontSize: 16, color: '#FFD700' },
+  coinIconSmText: { fontFamily: Fonts.monoBd, fontSize: 11, color: '#000', lineHeight: 22 },
 
-  editorBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderRadius: Radius.md,
-    padding: Spacing.md,
-    marginBottom: Spacing.md,
-    gap: 8,
+  toolRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    paddingHorizontal: 16, paddingVertical: 14,
   },
-  editorBtnTitle: { fontFamily: Fonts.display, fontSize: 20, letterSpacing: 1.5 },
-  editorBtnSub: { fontFamily: Fonts.body, fontSize: 12, marginTop: 1 },
+  toolIcon: { fontFamily: Fonts.mono, fontSize: 16, width: 20, textAlign: 'center' },
+  toolLabel: { fontFamily: Fonts.body, fontSize: 14, flex: 1 },
 
   adminBtn: { borderWidth: 1, borderRadius: Radius.md, padding: Spacing.md, alignItems: 'center', marginBottom: Spacing.md },
   adminBtnText: { fontFamily: Fonts.bodyBd, fontSize: 15 },

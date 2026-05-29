@@ -116,6 +116,7 @@ export default function TabLayout() {
         name="strecke"
         options={{
           title: 'Strecke',
+          href: null,
           tabBarIcon: ({ color }) => <StreckeIcon color={color} />,
         }}
       />
@@ -123,6 +124,7 @@ export default function TabLayout() {
         name="sensor"
         options={{
           title: 'Sensor',
+          href: null,
           tabBarIcon: ({ color }) => <SensorIcon color={color} />,
         }}
       />

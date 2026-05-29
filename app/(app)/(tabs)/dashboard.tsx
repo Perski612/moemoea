@@ -139,20 +139,18 @@ function WeeklyGoals({ stats, accent, theme }: {
 }
 
 function SlideBests({
-  eyebrow, title, sub, time, airtime, speed, gforce, rank, rankOf, accent, theme,
+  eyebrow, time, airtime, speed, gforce, rank, rankOf, accent, theme,
 }: {
-  eyebrow: string; title: string; sub: string
+  eyebrow: string
   time: string; airtime: string; speed: string; gforce: string; rank: string; rankOf: number
   accent: string; theme: Theme
 }) {
   return (
     <View style={s.slide}>
       <Text style={[s.slideEyebrow, { color: accent }]}>{eyebrow}</Text>
-      <Text style={[s.slideTitle, { color: theme.text }]}>{title}</Text>
-      <Text style={[s.slideSub, { color: theme.muted }]}>{sub}</Text>
       <View style={[s.bestTimeBox, { borderColor: `${accent}30`, backgroundColor: `${accent}08` }]}>
         <View>
-          <Text style={[s.bestTimeLabel, { color: theme.muted }]}>BESTE GESAMTZEIT</Text>
+          <Text style={[s.bestTimeLabel, { color: theme.muted }]}>BESTZEIT</Text>
           <Text style={[s.bestTimeValue, { color: accent }]}>{time}<Text style={[s.bestTimeUnit, { color: theme.muted }]}> min</Text></Text>
         </View>
         <View style={[s.rankBadge, { backgroundColor: `${accent}18` }]}>
@@ -229,16 +227,13 @@ function Carousel({ bests, weeklyRanking, accent, theme }: {
 
   const b = bests
   const slides = [
-    <SlideBests key="bests" eyebrow="★ MEINE BESTLEISTUNGEN" title="MOE MOEA Trails — Gesamt"
-      sub="Neckartal · Beste je gemessene Werte"
+    <SlideBests key="bests" eyebrow="GESAMT"
       time={b.gesamt.time} airtime={b.gesamt.airtime} speed={b.gesamt.speed} gforce={b.gesamt.gforce}
       rank={b.gesamt.rank} rankOf={b.gesamt.rankOf} accent={accent} theme={theme} />,
-    <SlideBests key="p1" eyebrow="P1 — OBERER TRAIL · 680m · ↓62m" title="Part 1 Bestzeiten"
-      sub="Bester Run insgesamt"
+    <SlideBests key="p1" eyebrow="PART 1 · 680m"
       time={b.p1.time} airtime={b.p1.airtime} speed={b.p1.speed} gforce={b.p1.gforce}
       rank={b.p1.rank} rankOf={b.p1.rankOf} accent={accent} theme={theme} />,
-    <SlideBests key="p2" eyebrow="P2 — UNTERER TRAIL · 520m · Loop" title="Part 2 Bestzeiten"
-      sub="Bester Run insgesamt"
+    <SlideBests key="p2" eyebrow="PART 2 · 520m"
       time={b.p2.time} airtime={b.p2.airtime} speed={b.p2.speed} gforce={b.p2.gforce}
       rank={b.p2.rank} rankOf={b.p2.rankOf} accent={accent} theme={theme} />,
     <SlideWeeklyRanking key="ranking" ranking={weeklyRanking} accent={accent} theme={theme} />,
@@ -431,6 +426,15 @@ export default function DashboardScreen() {
           />
         </View>
 
+        {/* Strecke Shortcut */}
+        <TouchableOpacity
+          onPress={() => router.push('/(app)/(tabs)/strecke')}
+          style={[s.streckeLink, { backgroundColor: theme.cardBg, borderColor: theme.cardBorder }]}
+          activeOpacity={0.75}
+        >
+          <Text style={[s.streckeLinkText, { color: theme.muted }]}>↗ Strecke &amp; Sektorzeiten</Text>
+        </TouchableOpacity>
+
         {/* Bestleistungen Carousel */}
         <Text style={[s.sectionLabel, { color: accent, marginTop: 24 }]}>Bestleistungen</Text>
         <Carousel bests={bests} weeklyRanking={weeklyRanking} accent={accent} theme={theme} />
@@ -500,9 +504,7 @@ const s = StyleSheet.create({
 
   carouselCard: { borderWidth: 1, borderRadius: 16, overflow: 'hidden', marginBottom: 0 },
   slide: { padding: 16, paddingBottom: 12 },
-  slideEyebrow: { fontFamily: Fonts.bodyBd, fontSize: 12, letterSpacing: 2.5, textTransform: 'uppercase', marginBottom: 4 },
-  slideTitle: { fontFamily: Fonts.bodyBd, fontSize: 18 },
-  slideSub: { fontFamily: Fonts.mono, fontSize: 12, marginTop: 2, marginBottom: 12 },
+  slideEyebrow: { fontFamily: Fonts.bodyBd, fontSize: 12, letterSpacing: 2.5, textTransform: 'uppercase', marginBottom: 10 },
 
   statsRow3: { flexDirection: 'row', gap: 8 },
   statCard: { flex: 1, borderWidth: 1, borderRadius: 10, padding: 8, alignItems: 'center' },
@@ -555,4 +557,10 @@ const s = StyleSheet.create({
     borderWidth: 1, borderRadius: 12,
   },
   showMoreText: { fontFamily: Fonts.bodyBd, fontSize: 13, letterSpacing: 1, textTransform: 'uppercase' },
+
+  streckeLink: {
+    borderWidth: 1, borderRadius: 10, paddingVertical: 10, paddingHorizontal: 14,
+    marginTop: 12, alignItems: 'center',
+  },
+  streckeLinkText: { fontFamily: Fonts.bodyBd, fontSize: 12, letterSpacing: 1.5, textTransform: 'uppercase' },
 })
